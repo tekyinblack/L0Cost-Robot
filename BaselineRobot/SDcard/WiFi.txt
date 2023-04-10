@@ -1,0 +1,13 @@
+// The first parameter in the wifi paramaeter file is the SSID of the network
+SSIDSSIDSSID
+//
+// The second parameter is the password associated with the SSID
+passwordpassword
+//
+// The third parameter is the name of the file containing the html code for the default home or index webpage used
+servobasic.html
+//
+// The fourth and fifth parameters are the port numbers to be used for the webserevr and for the video stream
+// They will default to 80 and 81 but the latter must be added to the default web page if video streaming is to be used
+38180
+38181

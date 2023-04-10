@@ -1,0 +1,72 @@
+/Example file for robot startup
+DRIVDFLT00540050                Set relative default speeds for motors at 54 left, 50 right  
+CMRADFLTPANN002000920160        Set pan max left, centre and max right
+CMRADFLTTILT002000950150        Set lower tilt, level and upper tilt
+GRIPDFLTCLAW009001350045        Set gripper open, max gripper setting, min gripper setting 
+GRIPDFLTLIFT009001350045        Set carry height, max height setting, min height setting
+PRFXCMD1DRIV0099009900500999    Stores a drive command with prefix CMD1 
+/    / anything beginning with a blank of a / is ignored on the ESP32, useful for comments
+/    Basic Commands are
+/    DRIV     the following is a motor drive command (Pico)
+/    CMRA     the following is a camera command (Pico)
+/    GRIP     the following is a gripper command (Pico)
+/    PRFX     the following is a command prefix to be stored. (Pico)
+/    FILE     the following is a file to run and return (ESP32)(Startup and Main files are run on startup if present)
+/    REPT     close the file and run again from the beginning
+/    PASS     the following is a file to pass control to without a return
+/    WAIT     robot waits specified length of time before sending ack (Pico)
+/    RSET     reset of robot, will also reset esp32 after it has been sent  (Pico)(ESP32)
+/    STOP     the robot comes to a controlled stop (Pico)
+/    STPE     full emergency stop (Pico)
+  /*             DRIVLLLLRRRRSSSSDDDD
+      *             DRIV command to cammera 
+      *                 STOP stops motors immediately, shorthand for DRIV0000000000000000
+      *                 DFLT default values being set ie smoothness constants or max speed
+      *                 LLLL speed of left drive set relative value
+      *                     RRRR speed of right drive set relative value
+      *                         SSSS smoothness of movement relative value
+      *                             DDDD duration of movement milliseconds
+      */ 
+ RIVLLLLRRRRSSSSDDDD
+DRIV0099009900500999
+DRIVSTOP
+     /*             CMRAPANNRLTVAAAAMMMM
+      *             CMRA command to cammera 
+      *                 STOP stops camera immediately, only valid if smoothness set, useful if panning for an object
+      *                 DFLT indicates a default value is being set ie centre or level positions and limits
+                        PRFX indicates that the following is a prefix definition
+      *                 PANN pan angle, either incrememtal value or absolute value
+      *                 TILT tilt angle, either incremental or absolute
+      *                     RLTV incremental command relative , ie left 5 more degrees
+      *                     ABSL absolute position, move to this absolute position immediately
+      *                 CENT centres the camera on the pan, uses default values   
+      *                 LEVL centres the camera on the tilt, ie level, uses default values
+      *                 INIT centres and levels the camera
+      *                         AAAA angle
+      *                             MMMM smoothness
+      *                 PRE1 moves the camera to preset position 1    
+      *                       PRE1 or other 4 character string is set via PRFX processing to be substituted with full command
+      *         Angles beginning with 1 are taken to be negative, angle beginnging with 0 are positive
+      */
+ MRAPANNRLTVAAAAMMMM
+CMRAPANNRLTVAAAAMMMM
+CMRAWAIT
+
+     /*             GRIPCLAWRLTVAAAAMMMM
+      *             GRIP command to cammera 
+      *                 STOP stops gripper immediately, only valid if smoothness set, useful if feeling for an object
+      *                 DFLT indicates a default value is being set ie ground level
+      *                 PRFX indicates that the following is a prefix definition
+      *                 CLAW gripper position, either incrememtal value or absolute value
+      *                 LIFT lift angle, either incremental or absolute
+      *                     RLTV incremental command, ie close 5 more degrees
+      *                     ABSL absolute position, move to this relative position immediately
+      *                         AAAA angle
+      *                             MMMM smoothness
+      *                 PRE1 executes the command stored as PRE1   
+      *                      PRE1 or other 4 character string is set via PRFX processing to be substituted with full command
+      *         Angles beginning with 1 are taken to be negative, angle beginnging with 0 are positive
+      */
+
+ GRIPCLAWRLTVAAAAMMMM
+GRIPCLAWRLTV10050050

@@ -1,0 +1,91 @@
+<html>
+  <head>
+	  <! Example web page for L0Cost robot> 
+    <title>Local Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      body { font-family: Arial; text-align: center; margin:0px auto; padding-top: 30px;}
+      table { margin-left: auto; margin-right: auto; }
+      td { padding: 8 px;  }
+      .button {
+        background-color: Tomato;
+        border: none;
+        border-radius: 10px;
+        color: white;
+        padding: 10px 20px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 18px;
+        margin: 6px 3px;
+        cursor: pointer;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: rgba(0,0,0,0);
+      }
+      img {  width: auto ;
+        max-width: 100% ;
+        height: auto ;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Basic Control</h1>
+    <img src="" id="photo" >
+    <table>
+		<! Process touch or mouse events >
+      <tr><td colspan="3" align="center"><button class="button" 
+      onmousedown="sndCmd('LMTR0000025500000255');" 
+      ontouchstart="sndCmd('LMTR0000025500000255');"
+      onmouseup="sndCmd('LSTOP');"
+      ontouchend="sndCmd('LSTOP');">Forward</button></td></tr>
+      <tr><td align="center"><button class="button" 
+      onmousedown="sndCmd('LMTR0000025500000000');" 
+      ontouchstart="sndCmd('LMTR0000025500000000');"
+      onmouseup="sndCmd('LSTOP');"
+      ontouchend="sndCmd('LSTOP');">Left</button></td>
+      <! STOP isn't really needed but is included in case of runaway >
+      <td align="center"><button class="button" 
+      onmousedown="sndCmd('LSTOP');" 
+      ontouchstart="sndCmd('LSTOP');">Stop</button></td>
+      <td align="center"><button class="button" 
+      onmousedown="sndCmd('LMTR0000000000000255');" 
+      ontouchstart="sndCmd('LMTR0000000000000255');"
+      onmouseup="sndCmd('LSTOP');"
+      ontouchend="sndCmd('LSTOP');">Right</button></td></tr>  
+      <tr><td align="center"><button class="button" 
+      onmousedown="sndCmd('LFLASHON');" 
+      ontouchstart="sndCmd('LFLASHON');"
+      >Light On</button></td>
+      <! FLASH LED commands >
+      <td align="center"><button class="button" 
+      onmousedown="sndCmd('LTOGGLEFLASH');" 
+      ontouchstart="sndCmd('LTOGGLEFLASH');">Toggle Light</button></td>
+      <td align="center"><button class="button" 
+      onmousedown="sndCmd('LFLASHOFF');" 
+      ontouchstart="sndCmd('LFLASHOFF');"
+      >Light Off</button></td></tr> 
+      <tr><td colspan="3"  align="center"><button class="button" 
+      onmousedown="sndCmd('LFLASHPEEK');" 
+      ontouchstart="sndCmd('LFLASHPEEK');"
+      >Light Peek 1</button></td></tr> 
+      <tr><td colspan="3"  align="center"><button class="button" 
+      onmousedown="sndCmd('LFLASHON');" 
+      ontouchstart="sndCmd('LFLASHON');"
+      onmouseup="sndCmd('LFLASHOFF');"
+      ontouchend="sndCmd('LFLASHOFF');">Light Peek 2</button></td></tr>               
+    </table>
+   <script>
+   function sndCmd(x) {
+     var xhr = new XMLHttpRequest();
+     xhr.open("GET", "/action?go=" + x, true);
+     xhr.send();
+   }
+   window.onload = document.getElementById("photo").src = window.location.protocol + "//" + window.location.hostname + ":38181/stream";
+  </script>
+  </body>
+</html>

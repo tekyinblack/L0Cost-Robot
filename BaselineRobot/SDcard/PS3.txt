@@ -1,0 +1,62 @@
+// The first parameter is the mac address of the PS3 controller to be used
+A0:5A:5A:A0:09:84
+//
+// The following values are used to load a translation table
+// which is used to interpret the controls on the PS3 controller
+// When a control is operated, the command is generated, incorporating any mumeric 
+// value associated with a control 
+// Placing a 0 in the first column nullifies that value
+// X represents a value to be passed to a remote processor
+// L represents a value to be passed to a local processor
+// F represents a script file name to be used
+//
+LLJX                  // left joystick values      
+LLJY
+LRJX                  // right joystick values     
+LRJY
+00XLJP                  // left joystick pressed     
+0XLJR                  // left joystick released    
+0XRJP                  // right joystick pressed
+0XRJR                  // right joystick released
+0XUPV                  // up button values
+0XUBP                  // up button pressed
+0XUBR                  // up button released
+0XRBV                  // right button values
+0XRBP                  // right button pressed
+0XRBR                  // right button released
+0XDBV                  // down button values
+0XDBP                  // down button pressed
+0XDBR                  // down button released
+0XLBV                  // left button values
+0XLBP                  // left button pressed
+0XLBR                  // left button released
+0XXBV                  // cross button values
+0XXBP                  // cross button pressed
+0XXBR                  // cross button released
+0SQUAREXSBV                  // square button values
+0SQUAREXSBP                  // square button pressed
+0SQUAREXSBR                  // square button released
+0TRIANGLEXTBV                  // triangle button values
+0TRIANGLEXTBP                  // triangle button pressed
+0TRIANGLEXTBR                  // triangle button released
+0XCBV                  // circle button values
+0XCBP                  // circle button pressed
+0XCBR                  // circle button released
+0XLSV                  // left shoulder values
+0XLSP                  // left shoulder pressed
+0XLSR                  // left shoulder released
+0XRSV                  // right shoulder values
+0XRSP                  // right shoulder pressed
+0XRSR                  // right shoulder released
+0XLTV                  // left trigger values
+0XLTP                  // left trigger pressed
+0XLTR                  // left trigger released
+0XRTV                  // right trigger values
+0XRTP                  // right trigger pressed
+0XRTR                  // right trigger released
+0XSLP                  // select button pressed
+0XSLR                  // select button released
+0XSTP                  // start button pressed
+0XSTR                  // start button released
+0XPSP                  // PS3 button pressed
+0XPSR                  // PS3 button released
