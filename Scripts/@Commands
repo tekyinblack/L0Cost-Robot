@@ -1,0 +1,88 @@
+
+
+Commands are processed by the module as they are input from a browser, a PS3 controller, 
+a file or are internally generated. A command is a string of characters prefixed by a single identifier character. 
+The main commands prefixes are:-
+L - a local command to be executed by the module
+X - an external command to be passed to the external controller via the serial port
+B - sends the same command value as both an internal and external command
+F - a file of commands to be processed sequentially
+
+If a command input does not start with one of these characters then it is ignored.
+
+Local commands
+These affect the operation of the module immediately and are hard coded into the module. An example of a few are
+LFLASHON - switch on the module flash LED
+LFLASHOFF - switch off the module flash LED
+LMTR0000020000000200 - switch on the left and right motors at power setting 200 (255 is max)
+
+External commands
+These are passed to the external processor over the serial connection with the X prefix stripped away. 
+They are interpreted by the extrenal processor so have no meaning to the module.
+An example of an external command might be 'XMOTOR0220' to set an external motor to power 220. The command
+would be passed via teh serial port as 'MOTOR0220'.
+
+File commands
+
+These specify a command file held on the SDcard which is expected to hold a list of commands to be executed sequentially. 
+At the time of writing this doesn't support nested files. The commands may be a mixture of internal or external commands.
+The commands files are very basic lists of information to be interpreted as actions to be taken in sequential order.
+Other than 'REPEAT', which closes a script file and reopens it, there is no other attempt at branch logic. Files can also contain
+PAUSE commands which delay processing the next file command for a specified period, for example 'PAUSE00500' would pause 
+command execution for 500 milliseconds. 
+Currently, script files cannot contain nested file commands, they are ignored, or files in subdirectories.
+An example of a file command would be 'FStartup.txt', which would execute the Startup script file again.
+
+List of Local Commands
+
+LFLASHON
+Switches on the flash LED
+
+LFLASHOFF
+Switches off the flash LED
+
+LTOGGLEFLASH
+Reverses the current state of the flash LED
+
+LFLASHPEEK
+Switches the flash LED on for the period set by the default flash peek period
+
+Local Servo commands
+These are in the basic format LxxxYzzzz where L indicates a local command, xxx is the local servo name, either S12 or S13,
+Y is one of three values. 
+C indcating that the servo moves to the set default centre position 
+I indicating that the following numeric value zzzz should be added to the current position.
+A indicating the servo moves to the absolute value specified by the numeric value zzzz.
+zzzz must be specified for a valid command or it is ignored.
+
+S12 indicates the servo connected to GPIO12
+S13 indicates the servo connected to GPIO13
+
+LS13C0000 moves the servo connected to GPIO13 to the default centre position
+LS12I-030 moves the servo S12 to the current position minus 30 degrees
+LS13A0150 moves the servo S13 to a position of 150 degrees
+
+Default values for servo operation are hardcoded but can be modified by commands in the format LxxxYYaaaabbbb. These are used
+to setup different servos for use with the module and are mainly for use in script files but can originate anywhere.
+
+YY can be the following values
+DCaaaa set the default centre position for this servo as aaaa
+DMaaaa sets the default maximum angle for the servo as aaaa
+DTaaaabbbb sets the default timing signal for zero degrees as aaaa and the default timing signal for maximum rotation as bbbb
+
+Local Motor commands
+The local motor commands are very basic and involve feeding a PWM signal to GPIO pins 12 and 13 as a single command
+in the format 
+LMTRxxxxyyyyXXXXYYYY 
+
+xxxxyyyy represent values passed to GPIO12 and XXXXYYYY represent values passed to GPIO13. For this limited implementation,
+only yyyy and YYYY are processed as drive values. They are expected to be between 0 and 255, anything outside this range is
+changed to the nearest value in range.
+
+LSTOP
+This sets ths drive values for both GPIO12 and 13 to zero.
+
+Camera commands
+These are very much under development but essentially provide teh same customisation as offered by the example Espressif application
+
+
