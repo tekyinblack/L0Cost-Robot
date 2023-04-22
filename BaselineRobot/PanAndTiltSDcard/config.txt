@@ -1,0 +1,24 @@
+// First parameter indicates mode
+// BASICSTA mode, serial passthru on, no handshake, Wifi client, web page input, local drive commands processed to drive pins
+// BASICAP mode, serial passthru on, no handshake, Wifi Access Point, web page input, local drive commands processed to drive pins
+// BASICPS3 mode, serial passthru on, no handshake, PS3 input, local drive commands processed to drive pins
+// REMOTESTA mode, serial passthru on, handshake on, Wifi client, web page input
+// REMOTEAP mode, serial passthru on, handshake on, Wifi Access Point, web page input
+// REMOTEPS3 mode, serial passthru on, handshake on, PS3 controller input
+// SERVOSTA mode, serial passthru on, no handshake, Wifi client, web page input, servo commands processed to 2 pins
+// SERVOAP mode, serial passthru on, no handshake, Wifi Access Point, web page input, servo commands processed to 2 pins
+// SERVOPS3 mode, serial passthru on, no handshake, PS3 controller input, servo commands processed to 2 pins
+SERVOSTA
+//
+// second parameter is the hostname, it must be a valid network name
+Camera01
+//
+// third parameter is the filename of the file containing the wifi or PS3 parameters
+WiFi.txt
+//
+// fourth parameter is the filename of the startup script, typically holds default parameter settings
+// the file will be ignored if it doesn't exist but has to be present
+Startup.txt
+//
+// fifth parameter is the filename of the main script which contains the list of commands to be initially executed by the controller
+Main.txt

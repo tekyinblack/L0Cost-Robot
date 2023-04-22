@@ -1,0 +1,30 @@
+// If present, the Main.txt file will be executed after the Startup.txt file
+// once executed, control is returned to the command interface
+//
+// The following commands are typical of what might be placed in this file
+// All the camera control commands in Startup.txt are also valid
+//
+// The first two commands set the default servo positions for the servos attached
+// to GPIO12 and 13
+// process servo command LSxxQ
+//   S indicates that this is a servo command
+//   xx = gpio 12 or 13, the pin the servo is attached to
+//   Q is one of the following command letters
+//
+//   C indicates that the servo moves to the set default centre position (set as 90 in the code)
+//     command layout LSxxC
+//
+//   A indicates that the servo moves to an absolute position indicated by the value zzzz
+//     command layout LSxxAzzzz
+//
+//   I indicates that the servo angle will be adjusted by adding the value zzzz to the current servo angle
+//     command layout LSxxIzzzz
+//
+//   D indicates a default value being processed
+//     command layout LSxxQyzzzzaaaa
+//   y can be one of M, where zzzz represents the default centre position
+//                   X, where zzzz represents the default maximum servo angle
+//                   T, where zzzz represnts the signal tiing for zero degress rotation
+//                         and aaaa is the signal timing for maximum rotation
+//
+
