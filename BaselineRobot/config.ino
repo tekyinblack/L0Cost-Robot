@@ -113,12 +113,19 @@ void fileParse(char *line, int fileType, int lineNo) {
 int read_datafile(fs::FS &fs, const char *path, int fileType) {
   char buf[200];
   int linecount = 0;
+  char fileName[33] = "/";
+  if (path[0] != '/') {
+    for (int i = 1; i <= 32; i++) {
+      fileName[i] = path[i - 1];
+    }
+  } else strcpy(fileName,path);
 
-  if (debugSerial) { Serial.printf("Reading file: %s\n", path); }
+  if (debugSerial) { Serial.printf("Reading file: %s\n", fileName); }
 
-  File file = fs.open(path);
+  File file = fs.open(fileName);
   if (!file) {
     if (debugSerial) { Serial.println("Failed to open file for reading"); }
+    if (debugSerial) { Serial.printf("Failed to open file %s for reading\n", fileName); }
     return 1;
   }
 
@@ -129,7 +136,7 @@ int read_datafile(fs::FS &fs, const char *path, int fileType) {
     }
     buf[l] = 0;
     // if input line starts with '//' then don't process as a line, taken as a comment.
-    if (!(buf[0] == '/' && buf[1] == '/')) {
+    if (!(buf[0] == ' ' || (buf[0] == '/' && buf[1] == '/'))) {
       linecount++;
       fileParse(buf, fileType, linecount);
     }
@@ -220,6 +227,16 @@ int readHtml(fs::FS &fs, const char *htmlf) {
   if (debugSerial) { Serial.println("File closed"); }
   page.close();
   return 0;
+}
+
+//
+void shiftFileName(char *fileName) {
+  int nameLength = strlen(fileName);
+  if (fileName[0] == '/') return;
+  for (int i = 20; i <= 0; i--) {
+    fileName[i] = fileName[i - 1];
+  }
+  fileName[0] = '/';
 }
 
 // startup routine to get config details and then wifi and email details ----------------------------------

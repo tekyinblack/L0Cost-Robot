@@ -18,6 +18,11 @@
 // 2 = file       if a file command fails, it waits and resubmits
 // 3 = PS3        if a PS3 command fails, it is ignored
 //
+// return
+// 0 command processed ok
+// 91 file processing in progress
+// 92 couldn't get lock
+//
 int cmdProcessor(char variable[], int source) {
   int retVal = 0;
   if (debugSerial) { Serial.printf("Command =  %s  %d \n", variable, source); }
@@ -32,18 +37,35 @@ int cmdProcessor(char variable[], int source) {
   if (variable[0] == 'X') {
     int i;
     for (i = 1; i < strlen(variable); i++) {
+      if (i > 30) break;              // break if longer than allowed
+      if (variable[i] == ' ') break;  // break if blank character
       sendChar[i - 1] = variable[i];
     }
     sendChar[i] = '\0';
-    retVal = sendHandshake(sendChar);
+    retVal = remoteProcessor(sendChar);
   }
   // process command file by schedule opening
   else if (variable[0] == 'F') {
-    int i;
-    for (i = 1; i < strlen(variable); i++) {
-      sendChar[i - 1] = variable[i];
+    int i, j;
+    // for (i = 1; i < strlen(variable); i++) {
+    //   sendChar[i - 1] = variable[i];
+    // }
+    // sendChar[i] = '\0';
+    //alternative method, overwrite 'F' with '/'
+    variable[0] = '/';
+    if (scriptStatus) {
+      if (debugSerial) { Serial.printf("File not processed, currently processing %s", scriptFile); }
+      retVal = 1;
+    } else {
+      // j = strlen(variable);
+      // if (j >= 20) j = 19;
+      // for (i = 1; i < j; i++) {
+      //   sendChar[i] = variable[i];
+      // }
+      sendChar[i] = '\0';
+      strcpy(scriptFile, variable);
+      scriptStatus = 1;  // begin script processing
     }
-    sendChar[i] = '\0';
     // Serial.println(sendChar);
     // set file status to 1 , process file
     // put filename in file open format
@@ -59,9 +81,12 @@ int cmdProcessor(char variable[], int source) {
     //shiftLeft(variable,1);
     retVal = localProcessor(sendChar);
   } else {
-    retVal = 99;
+    retVal = 90;
   }
   lockUnSet(cmdLock, source);
+  if (source == 1) {
+    return 0;
+  }
   return retVal;
 }
 // initialise PWM for direct control from the board
@@ -90,10 +115,26 @@ int sendHandshake(char commsString[]) {
   }
 }
 
+int remoteProcessor(char commsString[]) {
+  // handshake not implemented yet
+  if (execHandshake) {
+    return 2;
+  }
+  if (execSerial) {
+    Serial.println(commsString);
+    return 0;
+  }
+  return 1;
+}
+
 // process local command
 int localProcessor(char localVariable[]) {
-
-  if (strcmp(localVariable, "FLASHPEEK") == 0) {
+  int retVal = 0;
+  int pauseValue = 0;
+  // test if it starts with C and is thus a camera command
+  if (localVariable[0] == 'C') {
+    cameraControl(localVariable);
+  } else if (strcmp(localVariable, "FLASHPEEK") == 0) {
     // switch local flash LED on for limited time of 5 seconds, prevents it being left on
     flashState = 1;
     flashTimer = millis() + FLASH_PEEK_TIME;
@@ -117,23 +158,176 @@ int localProcessor(char localVariable[]) {
       flashTimer = FLASH_ON_TIME;
       digitalWrite(FLASH_PIN, HIGH);
     }
-  } else if (strcmp(localVariable, "RESET") == 0) {    // reboot local processor
-  } else if (strcmp(localVariable, "HINVERT") == 0) {  // swap horizontal video stream
-  } else if (strcmp(localVariable, "VINVERT") == 0) {  // swap vertical video stream
-  } else if (strcmp(localVariable, "PAUSE") == 0) {    // pause processing for defined number of milliseconds
-  }
-
-
-  else if (motorControl(localVariable) && servoControl(localVariable)) {  // assume its a motor control command, and if not, unknown command
+  } else if (strcmp(localVariable, "RESET") == 0) {   // reboot local processor
+  } else if (cmdCmp(localVariable, "REPEAT") == 0) {  // if script processing in operation, close and reopen script file
+    // this is used to run a script continuously
+    scriptProcess = 5;
+  } else if (cmdCmp(localVariable, "PAUSE") == 0) {  // pause processing for defined number of milliseconds
+    //get PAUSE value and add it to current cpu time, then set script processing to pause.
+    pauseValue = getValue(localVariable, 5);
+    scriptTimer = millis() + pauseValue;
+    if (debugSerial) { Serial.printf("Pausing for %d milliseconds \n", pauseValue); }
+    scriptProcess = 3;
+  } else if (motorControl(localVariable) && servoControl(localVariable)) {  // assume its a motor control command, and if not, unknown command
     Serial.print(localVariable);
     Serial.println(" - not known");
     if (debugSerial) { Serial.printf(" %s - not known\n", localVariable); }
   }
+  return retVal;
+}
+
+int getValue(char fullCommand[], int offset) {
+  char temp[5] = { 0, 0, 0, 0, 0 };
+  char length = strlen(fullCommand);
+  if ((length - offset >= 5) || (length - offset <= 0)) return 0;
+  for (int i = offset; i < length; i++) {
+    temp[i - offset] = fullCommand[i];
+  }
+  return atoi(temp);
+}
+
+int cmdCmp(char fullCommand[], char testCommand[]) {
+  int full = strlen(fullCommand);
+  int test = strlen(testCommand);
+  if (test > full) return 1;
+  for (int i = 0; i < test; i++) {
+    if (fullCommand[i] != testCommand[i]) return 1;
+  }
   return 0;
 }
+
+int cameraControl(char localVariable[]) {
+  int retVal = 0;
+  char cameraCommand[21];
+  sensor_t *s = esp_camera_sensor_get();
+  // left shift command
+  int i = 0;
+  while (localVariable[i] != 0) {
+    cameraCommand[i] = localVariable[i + 1];
+    i++;
+    if (i > 20) break;
+  }
+  if (cmdCmp(cameraCommand, "HMIRROR") == 0) {
+    // swap horizontal video stream 0,1
+    retVal = s->set_hmirror(s, getValue(cameraCommand, 7));
+
+  } else if (cmdCmp(cameraCommand, "VFLIP") == 0) {
+    // swap vertical video stream 0,1
+    retVal = s->set_vflip(s, getValue(cameraCommand, 5));
+
+  } else if (cmdCmp(cameraCommand, "FRAMESIZE") == 0) {
+    // change stream size
+    // 10 UXGA(1600x1200)
+    // 9  SXGA(1280x1024)
+    // 8  XGA(1024x768)
+    // 7  SVGA(800x600)
+    // 6  VGA(640x480)
+    // 5  CIF(400x296)
+    // 4  QVGA(320x240)
+    // 3  HQVGA(240x176)
+    // 0  QQVGA(160x120)
+    if (s->pixformat == PIXFORMAT_JPEG) {
+      // res = s->set_framesize(s, (framesize_t)val);
+      retVal = s->set_framesize(s, (framesize_t)getValue(cameraCommand, 9));
+    }
+  } else if (cmdCmp(cameraCommand, "QUALITY") == 0) {
+    // change jpeg quality 4-64
+    retVal = s->set_quality(s, getValue(cameraCommand, 7));
+
+  } else if (cmdCmp(cameraCommand, "BRIGHT") == 0) {
+    // adjust brightness -2,-1,0,1,2
+    retVal = s->set_brightness(s, getValue(cameraCommand, 6));
+
+  } else if (cmdCmp(cameraCommand, "CONTRAST") == 0) {
+    // adjust contrast -2,-1,0,1,2
+    retVal = s->set_contrast(s, getValue(cameraCommand, 8));
+
+  } else if (cmdCmp(cameraCommand, "SAT") == 0) {
+    // adjust saturation -2,-1,0,1,2
+    retVal = s->set_saturation(s, getValue(cameraCommand, 3));
+
+  } else if (cmdCmp(cameraCommand, "EFFECT") == 0) {
+    // apply effect 0,1,2,3,4,5,6
+    retVal = s->set_special_effect(s, getValue(cameraCommand, 6));
+
+  } else if (cmdCmp(cameraCommand, "AWB") == 0) {
+    // activate automatic white balance 0,1
+    retVal = s->set_whitebal(s, getValue(cameraCommand, 3));
+
+  } else if (cmdCmp(cameraCommand, "AWBGAIN") == 0) {
+    // automatic white balance gain 1 or 0
+    retVal = s->set_awb_gain(s, getValue(cameraCommand, 7));
+
+  } else if (cmdCmp(cameraCommand, "WBMODE") == 0) {
+    // automatic white balance mode 0 to 4
+    retVal = s->set_wb_mode(s, getValue(cameraCommand, 6));
+
+  } else if (cmdCmp(cameraCommand, "AEC") == 0) {
+    // activate automatic exposure control 0,1
+    retVal = s->set_exposure_ctrl(s, getValue(cameraCommand, 3));
+
+  } else if (cmdCmp(cameraCommand, "AECDSP") == 0) {
+    // activate automatic exposure control digital processing 0,1
+    retVal = s->set_aec2(s, getValue(cameraCommand, 6));
+
+  } else if (cmdCmp(cameraCommand, "AELEVEL") == 0) {
+    // adjust automatic exposure level -2, -1, 0,1,2
+    retVal = s->set_ae_level(s, getValue(cameraCommand, 7));
+
+  } else if (cmdCmp(cameraCommand, "AGC") == 0) {
+    // activate automatic gain control 0,1
+    retVal = s->set_gain_ctrl(s, getValue(cameraCommand, 3));
+
+  } else if (cmdCmp(cameraCommand, "AGCGAIN") == 0) {
+    // adjust automatic gain control level 0,1,2,3,4,5,6
+    retVal = s->set_agc_gain(s, getValue(cameraCommand, 7));
+
+  } else if (cmdCmp(cameraCommand, "BPC") == 0) {
+    // activate black pixel correction 0,1
+    retVal = s->set_bpc(s, getValue(cameraCommand, 3));
+
+  } else if (cmdCmp(cameraCommand, "WPC") == 0) {
+    // activate white pixel correction 0,1
+    retVal = s->set_wpc(s, getValue(cameraCommand, 3));
+
+  } else if (cmdCmp(cameraCommand, "RAWGMA") == 0) {
+    // activate gamma correction 0,1
+    retVal = s->set_raw_gma(s, getValue(cameraCommand, 6));
+
+  } else if (cmdCmp(cameraCommand, "DCW") == 0) {
+    // activate direct conversion 0,1
+    retVal = s->set_dcw(s, getValue(cameraCommand, 3));
+  }
+  return 0;
+}
+
+// servo command processing
 int servoControl(char localVariable[]) {
-  //int servoControl(int servoNo, char command, int value) {
+  // process servo command LSxxQ
+  //   S indicates that this is a servo command
+  //   xx = gpio 12 or 13, the pin the servo is attached to
+  //   Q is one of the following command letters
+  //
+  //   C indicates that the servo moves to the set default centre position (set as 90 in the code)
+  //     command layout LSxxC
+  //
+  //   A indicates that the servo moves to an absolute position indicated by the value zzzz
+  //     command layout LSxxAzzzz
+  //
+  //   I indicates that the servo angle will be adjusted by adding the value zzzz to the current servo angle
+  //     command layout LSxxIzzzz
+  //
+  //   D indicates a default value being processed
+  //     command layout LSxxQyzzzzaaaa
+  //   y can be one of M, where zzzz represents the default centre position
+  //                   X, where zzzz represents the default maximum servo angle
+  //                   T, where zzzz represnts the signal tiing for zero degress rotation
+  //                         and aaaa is the signal timing for maximum rotation
+  //
   int servoNo = 0;
+  int value = 0;
+  int value2 = 0;
+  char valueChar[5] = { 0, 0, 0, 0, 0 };
   if (execServo == 0) return 1;
   if (localVariable[0] != 'S') return 1;
   if (localVariable[1] != '1') return 1;
@@ -142,15 +336,43 @@ int servoControl(char localVariable[]) {
   } else if (localVariable[2] == '3') {
     servoNo = 13;
   } else return 1;
-
-  int value = 0;
-  char valueChar[5] = { 0, 0, 0, 0, 0 };
-  for (int i = 0; i < 4; i++) {
-    valueChar[i] = localVariable[i + 4];
-  }
-  value = atoi(valueChar);
-
   char command = localVariable[3];
+  if (command == 'D') {
+    // process defaults
+    command = localVariable[4];
+    if (command == 'M' || command == 'X') {
+      // process single default value for centre or maximum
+      // get the  number
+      for (int i = 0; i < 4; i++) {
+        valueChar[i] = localVariable[i + 5];
+      }
+      value = atoi(valueChar);
+    } else if (command == 'T') {
+      // process two values for timing      // get the  number
+      for (int i = 0; i < 4; i++) {
+        valueChar[i] = localVariable[i + 5];
+      }
+      value = atoi(valueChar);
+      // get the  number
+      for (int i = 0; i < 4; i++) {
+        valueChar[i] = localVariable[i + 9];
+      }
+      value2 = atoi(valueChar);
+    }
+  } else if (command == 'C') {
+    // we dont care
+  } else if (command == 'A' || command == 'I') {
+    // get the  number
+
+    for (int i = 0; i < 4; i++) {
+      valueChar[i] = localVariable[i + 4];
+    }
+    value = atoi(valueChar);
+  } else {
+    if (debugSerial) { Serial.println("Command unknown"); }
+    return 1;
+  }
+
 
   switch (servoNo) {
     case 12:
@@ -160,13 +382,22 @@ int servoControl(char localVariable[]) {
       } else if (command == 'A') {
         if ((abs(value) > maxServo12Angle) || value < 0) return 2;
         servo12Angle = value;
+        servo12.write(servo12Angle);
       } else if (command == 'I') {
         servo12Angle = servo12Angle + value;
         if (servo12Angle < 0) servo12Angle = 0;
         if (servo12Angle > maxServo12Angle) servo12Angle = maxServo12Angle;
+        servo12.write(servo12Angle);
+      } else if (command == 'M') {
+        servo12Centre = value;
+      } else if (command == 'X') {
+        maxServo12Angle = value;
+      } else if (command == 'T') {
+        servo12Min = value;
+        servo12Max = value2;
       } else return 3;
-      if (debugSerial) { Serial.printf("Servo 12 Angle %d \n", servo12Angle); }      
-      servo12.write(servo12Angle);
+      if (debugSerial) { Serial.printf("Servo 12 Angle %d \n", servo12Angle); }
+
       break;
     case 13:
       if (command == 'C') {
@@ -175,13 +406,21 @@ int servoControl(char localVariable[]) {
       } else if (command == 'A') {
         if ((abs(value) > maxServo13Angle) || value < 0) return 2;
         servo13Angle = value;
+        servo13.write(servo13Angle);
       } else if (command == 'I') {
         servo13Angle = servo13Angle + value;
         if (servo13Angle < 0) servo13Angle = 0;
         if (servo13Angle > maxServo13Angle) servo13Angle = maxServo13Angle;
+        servo13.write(servo13Angle);
+      } else if (command == 'M') {
+        servo13Centre = value;
+      } else if (command == 'X') {
+        maxServo13Angle = value;
+      } else if (command == 'T') {
+        servo13Min = value;
+        servo13Max = value2;
       } else return 3;
       if (debugSerial) { Serial.printf("Servo 13 Angle %d \n", servo13Angle); }
-      servo13.write(servo13Angle);
       break;
     default:
       return 1;
@@ -231,8 +470,9 @@ int motorControl(char localVariable[]) {
   return 0;
 }
 
-int fileProcessor() {
+void fileProcessor(int type) {
   /* File command processor
+  type is either 0 for startup script, or 1 for normal script. PAUSE and REPEAT ignored in Startup 
   File is opened and contents fed through common processor routine
   open file
   read line
@@ -243,6 +483,9 @@ check handshake - loop until handshake high - then send command
 if in pause, loop until pause ended.
   
   */
+  int result = 0;
+  char fileName[33] = "/";
+
   switch (scriptStatus) {
       // routine to read a data file and parse according to the type ----------------------------------
       //int read_datafile(fs::FS &fs, const char *path, int fileType) {
@@ -250,19 +493,26 @@ if in pause, loop until pause ended.
     case 0:
       // file processing not scheduled
       break;
+
     case 1:
       // file processing scheduled
       // open file
       // if file open ok, update status to 2, and file process to 0
       // if open fails, update status to 0
+      if (scriptFile[0] != '/') {
+        for (int i = 1; i <= 32; i++) {
+          fileName[i] = scriptFile[i - 1];
+        }
+      } else strcpy(fileName, scriptFile);
 
-      if (debugSerial) { Serial.printf("Reading script: %s\n", scriptFile); }
-      script = SD_MMC.open(scriptFile);
+      if (debugSerial) { Serial.printf("Reading script: %s\n", fileName); }
+      script = SD_MMC.open(fileName);
       if (!script) {
         if (debugSerial) { Serial.println("Failed to open script for reading"); }
         scriptStatus = 0;
       } else {
         scriptStatus = 2;
+        scriptProcess = 0;
       }
       break;
 
@@ -280,19 +530,25 @@ if in pause, loop until pause ended.
             if (l > 0 && scriptBuf[l - 1] == '\r') {
               l--;
             }
-            scriptBuf[l] = 0;
-            scriptProcess = 1;
+            // check for lines starting with blank or //. These are ignored.
+            if (scriptBuf[0] == ' ' || (scriptBuf[0] == '/' && scriptBuf[1] == '/')) {
+              scriptProcess = 0;
+            } else {
+              scriptBuf[l] = 0;
+              scriptProcess = 1;
+            }
           } else {
             if (debugSerial) { Serial.printf("Script: %s Completed \n", scriptFile); }
-            script.close();
-            scriptProcess = 0;
-            scriptStatus = 0;
+            scriptProcess = 4;
           }
           break;
         case 1:
-          if (!cmdProcessor(scriptBuf, 2)) {
-            scriptProcess = 2;
+          result = cmdProcessor(scriptBuf, 2);
+          // if the script process stte has been changed then command executed ok
+          if (scriptProcess != 1) {
             break;
+          } else if (result <= 91) {
+            scriptProcess = 2;
           }
           // handover command to command processor
           // if not accepted break
@@ -301,6 +557,25 @@ if in pause, loop until pause ended.
         case 2:
           // check if command processor now free, ie command complete
           // if so, update file process to 0
+          if (lockTest(cmdLock, 2) == 0) {
+            scriptProcess = 0;
+          }
+          break;
+        case 3:
+          // this is a do nothing case where the script processing is paused
+          // it isn't necessary but has been incuded so that if actions are needed then they can be added
+          break;
+        case 4:
+          // end of file, close file and reset script processing
+          script.close();
+          scriptProcess = 0;
+          scriptStatus = 0;
+          break;
+        case 5:
+          // repeat script processing, close file and set script processing to start again
+          script.close();
+          scriptProcess = 0;
+          scriptStatus = 1;
           break;
       }
   }

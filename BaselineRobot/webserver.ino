@@ -112,7 +112,7 @@ static esp_err_t cmd_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  sensor_t *s = esp_camera_sensor_get();
+  //sensor_t *s = esp_camera_sensor_get();
 
 
   if (cmdProcessor(variable,1)) {

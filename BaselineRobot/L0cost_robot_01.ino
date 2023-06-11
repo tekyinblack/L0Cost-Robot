@@ -84,12 +84,19 @@ void flagReport(void);
 // robothandler routines
 int cmdProcessor(char variable[], int source);
 int sendHandshake(char commsString[]);
+int remoteProcessor(char commsString[]);
 int localProcessor(char localVariable[]);
 void initPWM();
 int motorControl(char localVariable[]);
 int shiftLeft(char variable[], int step);
 int initServos(void);
 int servoControl(char localVariable[]);
+void fileProcessor(int type);
+int getValue(char fullCommand[], int offset);
+int cmdCmp(char fullCommand[], char testCommand[]);
+int cameraControl(char localVariable[]);
+void shiftFileName(char *fileName);
+
 // PS3 routines
 void onConnect();
 void notify();
@@ -122,7 +129,9 @@ int execServo = 0;      // configure servo control output, valu indicates either
 
 
 
-// script processing
+
+// script file processing
+char scriptFile[20] = "/startup.txt";
 int scriptStatus = 0;
 int scriptProcess = 0;
 char scriptBuf[200];
@@ -132,6 +141,7 @@ File script;
 long loopTimer = 0;
 long ledTimer = 0;
 long runTimer = 0;
+long scriptTimer = 0;
 
 // flash led timer definitions
 #define FLASH_ON_TIME 99999999  // flash LED timer set to 10,000 seconds, could be more but just sets a practical limit
@@ -142,14 +152,14 @@ char *htmlPage;
 
 char configDebug[20] = "NODEBUG";          // << flag debug processing DEBUG or NODEBUG
 char configType[20] = "BASICSTA";          // << type of processing
-char configWifi[20] = "/WiFi.txt";         // << file to be used from SD card for network setup
-char configConfig[20] = "/config.txt";     // << file to be used from SD card for configuration
-char configStartup[20] = "/startup.txt";   // << file to be used from SD card for startup commands
-char configMain[20] = "/main.txt";         // << file to be used from SD card for initial runtime commands
+char configWifi[20] = "WiFi.txt";         // << file to be used from SD card for network setup
+char configConfig[20] = "config.txt";     // << file to be used from SD card for configuration
+char configStartup[20] = "startup.txt";   // << file to be used from SD card for startup commands
+char configMain[20] = "main.txt";         // << file to be used from SD card for initial runtime commands
 char ssid[33] = "DUMMY_SSID";              // dummy ssid text indicating an error
 char password[33] = "DUMMY_PASSWORD";      // dummy wifi password indicating an error
 char configHostname[20] = "DummyHost";     // dummy host name
-char configPS3File[20] = "/PS3.txt";       // << file to be used for PS3 address
+char configPS3File[20] = "PS3.txt";       // << file to be used for PS3 address
 char configWiFiType[20] = "CLIENT";        // CLIENT - client mode, ACCESS - access point mode, NOWIFI - webserver turned off
 char htmlFile[20] = "notfound";            // web page to be used to command robot and view video
 int configWebPort = 80;                    // port number to be used for web server
@@ -160,8 +170,6 @@ char configPS3[20] = "FF:FF:FF:FF:FF:FF";  // dummy PS3 bluetooth address
 //int FLASH_PIN = 4;
 int flashState = 0;
 
-// script file processing
-char scriptFile[20] = "/startup.txt";
 
 
 // locks
@@ -223,11 +231,11 @@ void setup() {
   if (debugSerial) { Serial.println(String(__FILE__) + " " + String(__DATE__) + " " + String(__TIME__)); }
   //delay(5000);
 
- // pinMode(12, INPUT_PULLUP);  //--> This is done to resolve an "error" in 1-bit mode when SD_MMC.begin("/sdcard", true).
+  // pinMode(12, INPUT_PULLUP);  //--> This is done to resolve an "error" in 1-bit mode when SD_MMC.begin("/sdcard", true).
   pinMode(12, OUTPUT);
-  digitalWrite(12,1);
-    pinMode(13, OUTPUT);
-  digitalWrite(13,1);
+  digitalWrite(12, 1);
+  pinMode(13, OUTPUT);
+  digitalWrite(13, 1);
   //pinMode(13, INPUT_PULLUP);  //--> This is done to resolve an "error" in 1-bit mode when SD_MMC.begin("/sdcard", true).
   // get the sd card data
   // first setup SD card access
@@ -239,7 +247,7 @@ void setup() {
   // read default file and process, this will contain
   read_SDcard();
 
- // pinMode(12, INPUT_PULLDOWN);
+  // pinMode(12, INPUT_PULLDOWN);
   //pinMode(13, INPUT_PULLDOWN);
 
   // Turn off flash
@@ -249,19 +257,6 @@ void setup() {
 
 
 
-  if (execMotor == 1) {
-    // implememt 2 pin motor control
-    if (debugSerial) { Serial.printf("Implementing 2 pin motor control on pins %d and %d \n", rightMotorPin, leftMotorPin); }
-    initPWM();
-  }
-
-
-  // initialise servos
-  if (execServo == 1 and execMotor == 0) {
-    // initialise pan/tilt servo mode
-    // init servo12 and servo13
-    initServos();
-  }
 
   // initialise builtin led for status indicator
   pinMode(LED_BUILTIN, OUTPUT);
@@ -269,6 +264,7 @@ void setup() {
 
   // use camera defines to setup cammera access
   camera_config_t config;
+  /* STASRT
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
   config.pin_d0 = Y2_GPIO_NUM;
@@ -304,7 +300,35 @@ void setup() {
   config.frame_size = FRAMESIZE_VGA;
   config.jpeg_quality = 10;
   config.fb_count = 2;
-
+end of commented out config
+  */
+  config.ledc_channel = LEDC_CHANNEL_0;
+  config.ledc_timer = LEDC_TIMER_0;
+  config.pin_d0 = Y2_GPIO_NUM;
+  config.pin_d1 = Y3_GPIO_NUM;
+  config.pin_d2 = Y4_GPIO_NUM;
+  config.pin_d3 = Y5_GPIO_NUM;
+  config.pin_d4 = Y6_GPIO_NUM;
+  config.pin_d5 = Y7_GPIO_NUM;
+  config.pin_d6 = Y8_GPIO_NUM;
+  config.pin_d7 = Y9_GPIO_NUM;
+  config.pin_xclk = XCLK_GPIO_NUM;
+  config.pin_pclk = PCLK_GPIO_NUM;
+  config.pin_vsync = VSYNC_GPIO_NUM;
+  config.pin_href = HREF_GPIO_NUM;
+  config.pin_sscb_sda = SIOD_GPIO_NUM;
+  config.pin_sscb_scl = SIOC_GPIO_NUM;
+  config.pin_pwdn = PWDN_GPIO_NUM;
+  config.pin_reset = RESET_GPIO_NUM;
+  config.xclk_freq_hz = 20000000;
+  //config.frame_size = FRAMESIZE_UXGA;FRAMESIZE_QVGA
+  config.frame_size = FRAMESIZE_SVGA;
+  config.pixel_format = PIXFORMAT_JPEG; // for streaming
+  //config.pixel_format = PIXFORMAT_RGB565; // for face detection/recognition
+  config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
+  config.fb_location = CAMERA_FB_IN_PSRAM;
+  config.jpeg_quality = 12;
+  config.fb_count = 2;
   // Camera init
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
@@ -334,14 +358,35 @@ void setup() {
       }
     }
 
+    // read and process startup script file
+    scriptStatus = 1;
+    strcpy(scriptFile, configStartup);
+    while (scriptStatus) {
+      fileProcessor(0);
+    }
+
+    if (execMotor == 1) {
+      // implememt 2 pin motor control
+      if (debugSerial) { Serial.printf("Implementing 2 pin motor control on pins %d and %d \n", rightMotorPin, leftMotorPin); }
+      initPWM();
+    }
+
+
+    // initialise servos
+    if (execServo == 1 and execMotor == 0) {
+      // initialise pan/tilt servo mode
+      // init servo12 and servo13
+      initServos();
+    }
+
+    // Start streaming web server
+    startCameraServer();
 
     if (debugSerial) {
       Serial.print("Camera Stream Ready! Go to: http://");
       Serial.println(WiFi.localIP());
     }
 
-    // Start streaming web server
-    startCameraServer();
 
     // register the hostname for use with DNS
     if (!MDNS.begin(configHostname)) {
@@ -359,8 +404,10 @@ void setup() {
     Ps3.begin(configPS3);
   }
 
-  // finally read the startup file to process initialisation statements
-  // set default positions and initial movements
+  // Setup for processing main script file
+
+  scriptStatus = 1;
+  strcpy(scriptFile, configMain);
 }
 
 // the loop function flashes the internal LED on and off when connected to Wifi and
@@ -390,4 +437,17 @@ void loop() {
     cmdProcessor("LFLASHOFF", 0);
     flashTimer = FLASH_ON_TIME;
   }
+
+  fileProcessor(1);
+//
+// PAUSE file command processing
+//
+if (scriptProcess == 3 ) {
+  //if scriptTimer has expired, set script to process next command
+  if (scriptTimer <= loopTimer){
+    if (debugSerial) { Serial.println("Script pause ended"); }
+    scriptProcess = 2;
+  }
+}
+
 }
