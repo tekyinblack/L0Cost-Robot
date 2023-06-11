@@ -23,9 +23,9 @@
 //                         and aaaa is the signal timing for maximum rotation
 //
 // set the servo on gpio12 to centre position 95 degrees
-LS12DM0095
+LS12DM0099
 // set the servo on gpio13 to centre position 100 degrees
-LS13DM0100
+LS13DM095
 // All camera control settings are prefixed with LC, L for local, and C for camers
 // FRAMESIZE 
 // 10 UXGA(1600x1200)
@@ -37,15 +37,15 @@ LS13DM0100
 // 4  QVGA(320x240)
 // 3  HQVGA(240x176)
 // 0  QQVGA(160x120)
-LCFRAMESIZE06
+LCFRAMESIZE07
 // Quality range 10 - 63
 LCQUALITY12
 // Brightness -2 to 2
-LCBRIGHT00
+//LCBRIGHT00
 // Contrast -2 to 2
-LCCONTRAST00
+//LCCONTRAST00
 // Saturation -2 to 2
-LCSAT0
+//LCSAT0
 // Effect
 // 0 No Effect
 // 1 Negative
@@ -54,9 +54,9 @@ LCSAT0
 // 4 Green Tint
 // 5 Blue Tint
 // 6 Sepia
-LCEFFECT00
+//LCEFFECT00
 // Active White Balance 0 or 1
-LCAWB0
+LCAWB1
 // Active White Balance Gain 0 or 1
 LCAWBGAIN0
 // White Balance Mode
@@ -65,26 +65,26 @@ LCAWBGAIN0
 // 2 Cloudy
 // 3 Office
 // 4 Home
-LCWBMODE00
+//LCWBMODE00
 // Automatic Exposure Correction Sensor 0 or 1
-LCAEC1
+//LCAEC1
 // Automatic Exposure Digital Signal Processing
-LCAECDSP0
+//LCAECDSP0
 // Automatic Exposure Level -2 to 2
-LCAELEVEL0
+//LCAELEVEL0
 // Automatic Gain Control 0 or 1
-LCAGC0
+//LCAGC1
 // Automatic gain Control Ceiling 0 - 6
-LCGAIN00
+LCGAIN03
 // Black Pixel Correction 0 or 1
-LCBPC0
+//LCBPC0
 // White Pixel Correction 0 or 1
-LCWPC1
+//LCWPC1
 // Gamma Correction 0 or 1
-LCRAWGMA0
+//LCRAWGMA0
 // Horizontal mirror 0 or 1
-LCHMIRROR0
+//LCHMIRROR0
 // flip image vertically 0 or 1
-LCVFLIP0
+//LCVFLIP0
 // Scaling off or On 0 or 1
-LCDCW0
+//LCDCW1
