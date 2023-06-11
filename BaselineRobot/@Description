@@ -1,2 +1,3 @@
-This folder contains the first iteration after migrating from, the collaborative warehouse project.
-It still has incomplete functions
+This folder contains the second iteration after migrating from, the collaborative warehouse project.
+Most functions are complete and tested.
+Work has now started on the Pico sub processor which handles most of the direct motor and sensor workload
