@@ -1,0 +1,115 @@
+<html>
+  <head>
+    <title>Local Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      body { font-family: Arial; text-align: center; margin:0px auto; padding-top: 30px;}
+      table { margin-left: auto; margin-right: auto; }
+      td { padding: 8 px;  }
+      .button {
+        background-color: Tomato;
+        border: none;
+        border-radius: 10px;
+        color: white;
+        padding: 10px 20px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 18px;
+        margin: 6px 3px;
+        cursor: pointer;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: rgba(0,0,0,0);
+      }
+      img {  width: auto ;
+        max-width: 100% ;
+        height: auto ; 
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Pan and Tilt Control</h1>
+    <img src="" id="photo" >
+    <table>
+		<! Pan and Tilt servo commands >
+      <tr>
+      <td align="center"><button class="button" 
+      onmousedown="sndCmd('LS13I0005');" 
+      ontouchstart="sndCmd('LS13I0005');"
+      >Up</button></td><td align="center"><button class="button" 
+      onmousedown="sndCmd('LS13I0001');" 
+      ontouchstart="sndCmd('LS13I0001');"
+      >Up fine</button></td></tr>
+    </table>
+	<table>
+      <tr><td align="center"><button class="button" 
+      onmousedown="sndCmd('LS12I0001');" 
+      ontouchstart="sndCmd('LS12I0001');"
+      > < </button></td>
+      <td align="center"><button class="button" 
+      onmousedown="sndCmd('LS12I0005');" 
+      ontouchstart="sndCmd('LS12I0005');"
+      > << </button></td>
+      <td align="center"><button class="button" 
+      onmousedown="sndCmd('LS12I-005');" 
+      ontouchstart="sndCmd('LS12I-005');"
+      > >> </button></td>
+      <td align="center"><button class="button" 
+      onmousedown="sndCmd('LS12I-001');" 
+      ontouchstart="sndCmd('LS12I-001');"
+      > > </button></td></tr>
+    </table>
+    <table>
+      <tr><td colspan="5" align="center"><button class="button" 
+      onmousedown="sndCmd('LS13I-005');" 
+      ontouchstart="sndCmd('LS13I-005');"
+      >Down</button></td>
+     <td colspan="5" align="center"><button class="button" 
+      onmousedown="sndCmd('LS13I-001');" 
+      ontouchstart="sndCmd('LS13I-001');"
+      >Down fine</button></td></tr>
+    </table>
+    <table>
+      <tr><td align="center"><button class="button" 
+      onmousedown="sndCmd('LS12C0000');" 
+      ontouchstart="sndCmd('LS12C0000');"
+      >Centre</button></td>
+      <td colspan="5" align="center"><button class="button" 
+      onmousedown="sndCmd('LS13C0000');" 
+      ontouchstart="sndCmd('LS13C0000');"
+      >Level</button></td></tr>
+    </table>
+           <! FLASH LED commands >
+    <table>
+      <tr><td align="center"><button class="button" 
+      onmousedown="sndCmd('LFLASHON');" 
+      ontouchstart="sndCmd('LFLASHON');"
+      >Light On</button></td>
+       <td align="center"><button class="button" 
+      onmousedown="sndCmd('LTOGGLEFLASH');" 
+      ontouchstart="sndCmd('LTOGGLEFLASH');">Toggle Light</button></td>
+      <td align="center"><button class="button" 
+      onmousedown="sndCmd('LFLASHOFF');" 
+      ontouchstart="sndCmd('LFLASHOFF');"
+      >Light Off</button></td></tr> 
+      <tr><td colspan="3"  align="center"><button class="button" 
+      onmousedown="sndCmd('LFLASHON');" 
+      ontouchstart="sndCmd('LFLASHON');"
+      onmouseup="sndCmd('LFLASHOFF');"
+      ontouchend="sndCmd('LFLASHOFF');">Flash Light</button></td></tr>               
+    </table>
+   <script>
+   function sndCmd(x) {
+     var xhr = new XMLHttpRequest();
+     xhr.open("GET", "/action?go=" + x, true);
+     xhr.send();
+   }
+   window.onload = document.getElementById("photo").src = window.location.protocol + "//" + window.location.hostname + ":81/stream";
+  </script>
+  </body>
+</html>
