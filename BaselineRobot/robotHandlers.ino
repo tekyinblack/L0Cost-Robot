@@ -12,6 +12,9 @@
   - if in SERVOPS3 mode, serial passthru on, no handshake, PS3 controller input, servo commands processed to 2 pins
 */
 //
+// *********************************************************************************************
+// Command processor routine - all commands routed via this code
+// *********************************************************************************************
 // the source field indicates where the command came from
 // 0 = internal   internal commands are executed irrespective of status
 // 1 = web page   if a web page command fails, 500 message returned, the web page may resubmit
@@ -89,18 +92,51 @@ int cmdProcessor(char variable[], int source) {
   }
   return retVal;
 }
-// initialise PWM for direct control from the board
+// *********************************************************************************************
+// initialise PWM for direct control from the controller
+// *********************************************************************************************
 void initPWM() {
+  //Set up PWM for motor speed control 
+  ledcSetup(rightMotorPWMSpeedChannel, PWMFreq, PWMResolution);
+  ledcSetup(leftMotorPWMSpeedChannel, PWMFreq, PWMResolution);
+  attachPWM();   // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Remove when line follower hardware fixed
+}
+// *********************************************************************************************
+// detach PWM for direct control from the board (typically line follower circuit)
+// *********************************************************************************************
+//  NOT CURRENTLY REQUIRED UNTIL HARDWARE FIX FOR LINE FOLLOWER RESOLVED
+// *********************************************************************************************
+void detachPWM() {
+  // change pin usage to input to allw local motor control
+  return;  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Remove when line follower hardware fixed
+  execPWM = 0;  // flag pwm detached
+  //ledcWrite(rightMotorPWMSpeedChannel, 0);
+  //ledcWrite(leftMotorPWMSpeedChannel, 0);
+  ledcDetachPin(leftMotorPin);
+  ledcDetachPin(rightMotorPin);
+  //GPIO.func_out_sel_cfg[rightMotorPin].inv_sel = 0;
+  //GPIO.func_out_sel_cfg[leftMotorPin].inv_sel = 0;
+  pinMode(rightMotorPin, INPUT);
+  pinMode(leftMotorPin, INPUT);
+  if (debugSerial) { Serial.println("PWM Detached");}
+}
+// *********************************************************************************************
+// initialise PWM for direct control from the controller
+// *********************************************************************************************
+void attachPWM() {
   //Set up PWM for motor speed
   pinMode(rightMotorPin, OUTPUT);
   pinMode(leftMotorPin, OUTPUT);
-  ledcSetup(rightMotorPWMSpeedChannel, PWMFreq, PWMResolution);
-  ledcSetup(leftMotorPWMSpeedChannel, PWMFreq, PWMResolution);
   ledcAttachPin(rightMotorPin, rightMotorPWMSpeedChannel);
   ledcAttachPin(leftMotorPin, leftMotorPWMSpeedChannel);
   GPIO.func_out_sel_cfg[rightMotorPin].inv_sel = 1;
   GPIO.func_out_sel_cfg[leftMotorPin].inv_sel = 1;
+  execPWM = 1;  // flag pwm attached
+  directTimer = millis() + directTimeOut;  // reset direct timeout timer
+  if (debugSerial) { Serial.println("PWM Attached");}
 }
+
+// *********************************************************************************************
 int sendHandshake(char commsString[]) {
   // check if this routine is supposed to be used
   if (!execHandshake || !execSerial) {
@@ -114,7 +150,7 @@ int sendHandshake(char commsString[]) {
     return 1;
   }
 }
-
+// *********************************************************************************************
 int remoteProcessor(char commsString[]) {
   // handshake not implemented yet
   if (execHandshake) {
@@ -126,8 +162,9 @@ int remoteProcessor(char commsString[]) {
   }
   return 1;
 }
-
+// *********************************************************************************************
 // process local command
+// *********************************************************************************************
 int localProcessor(char localVariable[]) {
   int retVal = 0;
   int pauseValue = 0;
@@ -168,6 +205,21 @@ int localProcessor(char localVariable[]) {
     scriptTimer = millis() + pauseValue;
     if (debugSerial) { Serial.printf("Pausing for %d milliseconds \n", pauseValue); }
     scriptProcess = 3;
+  } else if (cmdCmp(localVariable, "MTRATTACH") == 0) {  // initialise motor processing
+    // execute routine to initialise PWM to the motor control pins
+    attachPWM();
+  } else if (cmdCmp(localVariable, "MTRDETACH") == 0) {  // de-initialise motor processing
+    // execute routine to turn off PWM to motor control pins and make them input
+    detachPWM();
+  } else if (cmdCmp(localVariable, "MTRTIMEOUT") == 0) {     // motor processing timeout
+    // timing routine to automatically deinitialise the PWM pins after number of milliseconds
+      directTimeOut = getValue(localVariable, 10);
+      if (directTimeOut <0) {
+        directTimeOut = defaultTimeOut;
+      } else if (directTimeOut == 0) {
+        directTimeOut = 9999999;   // if set as zero the set to 999 seconds
+      }
+      if (debugSerial) { Serial.printf("Timeout set to - %d\n", directTimeOut); }
   } else if (motorControl(localVariable) && servoControl(localVariable)) {  // assume its a motor control command, and if not, unknown command
     Serial.print(localVariable);
     Serial.println(" - not known");
@@ -175,17 +227,17 @@ int localProcessor(char localVariable[]) {
   }
   return retVal;
 }
-
+// *********************************************************************************************
 int getValue(char fullCommand[], int offset) {
-  char temp[5] = { 0, 0, 0, 0, 0 };
+  char temp[6] = { 0, 0, 0, 0, 0, 0  };
   char length = strlen(fullCommand);
-  if ((length - offset >= 5) || (length - offset <= 0)) return 0;
+  if ((length - offset >= 6) || (length - offset <= 0)) return 0;
   for (int i = offset; i < length; i++) {
     temp[i - offset] = fullCommand[i];
   }
   return atoi(temp);
 }
-
+// *********************************************************************************************
 int cmdCmp(char fullCommand[], char testCommand[]) {
   int full = strlen(fullCommand);
   int test = strlen(testCommand);
@@ -195,7 +247,7 @@ int cmdCmp(char fullCommand[], char testCommand[]) {
   }
   return 0;
 }
-
+// *********************************************************************************************
 int cameraControl(char localVariable[]) {
   int retVal = 0;
   char cameraCommand[21];
@@ -300,8 +352,9 @@ int cameraControl(char localVariable[]) {
   }
   return 0;
 }
-
+// *********************************************************************************************
 // servo command processing
+// *********************************************************************************************
 int servoControl(char localVariable[]) {
   // process servo command LSxxQ
   //   S indicates that this is a servo command
@@ -427,37 +480,60 @@ int servoControl(char localVariable[]) {
   }
   return 0;
 }
-
+// *********************************************************************************************
+// Interpret and execute motor control on pins 12 and 13
+// *********************************************************************************************
 int motorControl(char localVariable[]) {
+  // process motor control LMTR command pattern
+  //  MTR left values / right values / runtime
+  // the left and right values are from 0-255
+  // the runtime is from 0-9999 and indcates the length of time in milliseconds the motor value is active for.
+  // a runtime of 0 does not timeout
+  // MTRxxxxyyyytttt
+  // or STOP command which zero's both channels
 
-  if (!execMotor) return 1;
+  if (!execMotor) return 1;   // not processing motor commands
+  if (!execPWM)   {
+    attachPWM();
+  }
 
   int driveValueLY = 0;
   int driveValueRY = 0;
+  int runTimeValue = 0;
 
   char driveCharLY[5] = { 0, 0, 0, 0, 0 };
   char driveCharRY[5] = { 0, 0, 0, 0, 0 };
+  char runTimeChar[5] = { 0, 0, 0, 0, 0 };
 
-  // command pattern
-  //  MTR left values / right values
-  // MTRxxxxyyyyXXXXYYYY
+
   if (localVariable[0] == 'M') {
     int i;
     for (i = 0; i < 4; i++) {
-      driveCharLY[i] = localVariable[i + 7];
-      driveCharRY[i] = localVariable[i + 15];
+      driveCharLY[i] = localVariable[i + 3];
+      driveCharRY[i] = localVariable[i + 7];
+      runTimeChar[i] = localVariable[i + 11];
     }
     driveValueLY = atoi(driveCharLY);
     driveValueRY = atoi(driveCharRY);
+    runTimeValue = atoi(runTimeChar);
 
-    if (execMotor == 1) {
-      // two pin motor control only has drive forward controls with tank steer
-      if (driveValueLY < 0) driveValueLY = 0;
-      if (driveValueRY < 0) driveValueRY = 0;
-      ledcWrite(rightMotorPWMSpeedChannel, driveValueRY);
-      ledcWrite(leftMotorPWMSpeedChannel, driveValueLY);
-    } else if (execMotor == 2) {
-      Serial.println("4 pin control not implemented yet");
+
+    // two pin motor control only has drive forward controls with tank steer
+    // negative values are therefor zeroed
+    if (driveValueLY < 0) driveValueLY = 0;
+    if (driveValueRY < 0) driveValueRY = 0;
+    if (runTimeValue < 0) runTimeValue = 0;
+    ledcWrite(rightMotorPWMSpeedChannel, driveValueRY);
+    ledcWrite(leftMotorPWMSpeedChannel, driveValueLY);
+    if (runTimeValue == 0) {
+      motorTimer=millis() + 999999; // default timeout is 99 seconds
+    } else motorTimer = millis() + runTimeValue;
+    directTimer = millis() + directTimeOut;  // reset direct timeout timer
+    if (debugSerial) { Serial.printf("Motor left - %d Motor right - %d Timer - %d\n", driveValueLY,driveValueRY, runTimeValue); }
+    if (scriptStatus) {
+      scriptTimer = millis() + runTimeValue;
+      if (debugSerial) { Serial.printf("Pausing for %d milliseconds \n", runTimeValue); }
+      scriptProcess = 3;
     }
 
   } else if (strcmp(localVariable, "STOP") == 0) {
@@ -469,7 +545,7 @@ int motorControl(char localVariable[]) {
   } else return 1;
   return 0;
 }
-
+// *********************************************************************************************
 void fileProcessor(int type) {
   /* File command processor
   type is either 0 for startup script, or 1 for normal script. PAUSE and REPEAT ignored in Startup 
@@ -580,7 +656,7 @@ if in pause, loop until pause ended.
       }
   }
 }
-
+// *********************************************************************************************
 int shiftLeft(char *variable[], int step) {
   int retVal = 0;
   if (*variable[0] == '\0') return 1;
@@ -594,9 +670,9 @@ int shiftLeft(char *variable[], int step) {
   *variable[i] = '\0';
   return 0;
 }
-
+// *********************************************************************************************
 int initServos(void) {
-  // these dummies just provide a work around for the camera pins usage
+  // these dummies just provide a work around for the servo pins usage
   dummy1.setPeriodHertz(50);
   dummy2.setPeriodHertz(50);
   dummy1.attach(1, 1000, 2000);
