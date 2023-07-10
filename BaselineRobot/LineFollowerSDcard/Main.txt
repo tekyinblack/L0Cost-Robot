@@ -1,0 +1,18 @@
+// If present, the Main.txt file will be executed after the Startup.txt file
+// once executed, control is returned to the command interface
+//
+//  MTR left values / right values / runtime
+// the left and right values are from 0-255
+// the runtime is from 0-9999 and indcates the length of time in milliseconds the motor value is active for.
+// a runtime of 0 does not timeout
+// MTRxxxxyyyytttt
+// or STOP command which zero's both channels
+//
+// drive left motor for 1 second (turn right)
+// LMTR025500001000
+// drive right motor for 2 seconds (turn left)
+// LMTR000002552000
+// drive straight ahead for 3 seconds
+// LMTR025502553000
+
+
