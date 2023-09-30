@@ -1,4 +1,4 @@
-// lock routines
+// lock routines to ensure that script processing runs in harmony with input commands from PS3 or Webpages
 int lockSet(int &lock, int value) {
   int retVal = 0;
   if (!value) return retVal;

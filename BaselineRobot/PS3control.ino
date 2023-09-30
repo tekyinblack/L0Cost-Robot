@@ -79,35 +79,39 @@ void notify() {
   // even if not specified in the translate table. This generates a control string of four values which can be sent to
   // two different destinations
   if (abs(Ps3.event.analog_changed.stick.lx) + abs(Ps3.event.analog_changed.stick.ly) + abs(Ps3.event.analog_changed.stick.rx) + abs(Ps3.event.analog_changed.stick.ry) > 2 && ps3Translate[0].value[0]) {
-    Serial.print("Moved the left stick:");
-    Serial.print(" x=");
-    Serial.print(Ps3.data.analog.stick.lx, DEC);
-    Serial.print(" y=");
-    Serial.print(Ps3.data.analog.stick.ly, DEC);
-    Serial.println();
-    sprintf(sendCommand, "%s%04d%04d%04d%04d",
-            ps3Translate[0].value,
-            Ps3.data.analog.stick.lx,
-            Ps3.data.analog.stick.ly,
-            Ps3.data.analog.stick.rx,
-            Ps3.data.analog.stick.ry);
-    cmdProcessor(sendCommand, 3);
+    if (debugSerial) {
+      Serial.print("Moved the left stick:");
+      Serial.print(" x=");
+      Serial.print(Ps3.data.analog.stick.lx, DEC);
+      Serial.print(" y=");
+      Serial.print(Ps3.data.analog.stick.ly, DEC);
+      Serial.println();
+      sprintf(sendCommand, "%s%04d%04d%04d%04d",
+              ps3Translate[0].value,
+              Ps3.data.analog.stick.lx,
+              Ps3.data.analog.stick.ly,
+              Ps3.data.analog.stick.rx,
+              Ps3.data.analog.stick.ry);
+      cmdProcessor(sendCommand, 3);
+    }
   }
 
   if (abs(Ps3.event.analog_changed.stick.lx) + abs(Ps3.event.analog_changed.stick.ly) + abs(Ps3.event.analog_changed.stick.rx) + abs(Ps3.event.analog_changed.stick.ry) > 2 && ps3Translate[1].value[0]) {
-    Serial.print("Moved the right stick:");
-    Serial.print(" x=");
-    Serial.print(Ps3.data.analog.stick.rx, DEC);
-    Serial.print(" y=");
-    Serial.print(Ps3.data.analog.stick.ry, DEC);
-    Serial.println();
-    sprintf(sendCommand, "%s%04d%04d%04d%04d",
-            ps3Translate[1].value,
-            Ps3.data.analog.stick.lx,
-            Ps3.data.analog.stick.ly,
-            Ps3.data.analog.stick.rx,
-            Ps3.data.analog.stick.ry);
-    cmdProcessor(sendCommand, 3);
+    if (debugSerial) {
+      Serial.print("Moved the right stick:");
+      Serial.print(" x=");
+      Serial.print(Ps3.data.analog.stick.rx, DEC);
+      Serial.print(" y=");
+      Serial.print(Ps3.data.analog.stick.ry, DEC);
+      Serial.println();
+      sprintf(sendCommand, "%s%04d%04d%04d%04d",
+              ps3Translate[1].value,
+              Ps3.data.analog.stick.lx,
+              Ps3.data.analog.stick.ly,
+              Ps3.data.analog.stick.rx,
+              Ps3.data.analog.stick.ry);
+      cmdProcessor(sendCommand, 3);
+    }
   }
 
   //--------------- Digital stick button events --------------
@@ -116,85 +120,93 @@ void notify() {
     cmdProcessor(ps3Translate[2].value, 3);
   }
   if (Ps3.event.button_up.l3 && ps3Translate[3].value[0]) {
-    Serial.println("Released the left stick button");
+    if (debugSerial) { Serial.println("Released the left stick button"); }
     cmdProcessor(ps3Translate[3].value, 3);
   }
 
   if (Ps3.event.button_down.r3 && ps3Translate[4].value[0]) {
-    Serial.println("Started pressing the right stick button");
+    if (debugSerial) { Serial.println("Started pressing the right stick button"); }
     cmdProcessor(ps3Translate[4].value, 3);
   }
   if (Ps3.event.button_up.r3 && ps3Translate[5].value[0]) {
-    Serial.println("Released the right stick button");
+    if (debugSerial) { Serial.println("Released the right stick button"); }
     cmdProcessor(ps3Translate[5].value, 3);
   }
 
   //--------------- Digital and Analog D-pad button events --------------
   if (abs(Ps3.event.analog_changed.button.up) && ps3Translate[6].value[0]) {
-    Serial.print("Pressing the up button: ");
-    Serial.println(Ps3.data.analog.button.up, DEC);
+    if (debugSerial) {
+      Serial.print("Pressing the up button: ");
+      Serial.println(Ps3.data.analog.button.up, DEC);
+    }
     sprintf(sendCommand, "%s%04d",
             ps3Translate[6].value,
             Ps3.data.analog.button.up);
     cmdProcessor(sendCommand, 3);
   }
   if (Ps3.event.button_down.up && ps3Translate[7].value[0]) {
-    Serial.println("Started pressing the up button");
+    if (debugSerial) { Serial.println("Started pressing the up button"); }
     cmdProcessor(ps3Translate[7].value, 3);
   }
   if (Ps3.event.button_up.up && ps3Translate[8].value[0]) {
-    Serial.println("Released the up button");
+    if (debugSerial) { Serial.println("Released the up button"); }
     cmdProcessor(ps3Translate[8].value, 3);
   }
 
   if (abs(Ps3.event.analog_changed.button.right) && ps3Translate[9].value[0]) {
-    Serial.print("Pressing the right button: ");
-    Serial.println(Ps3.data.analog.button.right, DEC);
+    if (debugSerial) {
+      Serial.print("Pressing the right button: ");
+      Serial.println(Ps3.data.analog.button.right, DEC);
+    }
     sprintf(sendCommand, "%s%04d",
             ps3Translate[9].value,
             Ps3.data.analog.button.right);
     cmdProcessor(sendCommand, 3);
   }
   if (Ps3.event.button_down.right && ps3Translate[10].value[0]) {
-    Serial.println("Started pressing the right button");
+    if (debugSerial) { Serial.println("Started pressing the right button"); }
     cmdProcessor(ps3Translate[10].value, 3);
   }
   if (Ps3.event.button_up.right && ps3Translate[11].value[0]) {
-    Serial.println("Released the right button");
+    if (debugSerial) { Serial.println("Released the right button"); }
     cmdProcessor(ps3Translate[11].value, 3);
   }
 
   if (abs(Ps3.event.analog_changed.button.down) && ps3Translate[12].value[0]) {
-    Serial.print("Pressing the down button: ");
-    Serial.println(Ps3.data.analog.button.down, DEC);
+    if (debugSerial) {
+      Serial.print("Pressing the down button: ");
+      Serial.println(Ps3.data.analog.button.down, DEC);
+    }
     sprintf(sendCommand, "%s%04d",
             ps3Translate[12].value,
             Ps3.data.analog.button.down);
     cmdProcessor(sendCommand, 3);
   }
   if (Ps3.event.button_down.down && ps3Translate[13].value[0]) {
-    Serial.println("Started pressing the down button");
+    if (debugSerial) { Serial.println("Started pressing the down button"); }
     cmdProcessor(ps3Translate[13].value, 3);
   }
   if (Ps3.event.button_up.down && ps3Translate[16].value[0]) {
-    Serial.println("Released the down button");
+    if (debugSerial) { Serial.println("Released the down button"); }
     cmdProcessor(ps3Translate[14].value, 3);
   }
 
   if (abs(Ps3.event.analog_changed.button.left) && ps3Translate[15].value[0]) {
-    Serial.print("Pressing the left button: ");
-    Serial.println(Ps3.data.analog.button.left, DEC);
+    if (debugSerial) {
+      Serial.print("Pressing the left button: ");
+      Serial.println(Ps3.data.analog.button.left, DEC);
+    }
     sprintf(sendCommand, "%s%04d",
             ps3Translate[15].value,
             Ps3.data.analog.button.left);
     cmdProcessor(sendCommand, 3);
   }
   if (Ps3.event.button_down.left && ps3Translate[16].value[0]) {
-    Serial.println("Started pressing the left button");
+    if (debugSerial) { Serial.println("Started pressing the left button"); }
     cmdProcessor(ps3Translate[16].value, 3);
   }
   if (Ps3.event.button_up.left && ps3Translate[17].value[0]) {
-    Serial.println("Released the left button");
+    if (debugSerial) { Serial.println("Released the left button"); }
     cmdProcessor(ps3Translate[17].value, 3);
   }
 
@@ -202,170 +214,186 @@ void notify() {
   //--- Digital and Analog cross/square/triangle/circle button events ---
 
   if (abs(Ps3.event.analog_changed.button.cross) && ps3Translate[18].value[0]) {
-    Serial.print("Pressing the cross button: ");
-    Serial.println(Ps3.data.analog.button.cross, DEC);
+    if (debugSerial) {
+      Serial.print("Pressing the cross button: ");
+      Serial.println(Ps3.data.analog.button.cross, DEC);
+    }
     sprintf(sendCommand, "%s%04d",
             ps3Translate[18].value,
             Ps3.data.analog.button.cross);
     cmdProcessor(sendCommand, 3);
   }
   if (Ps3.event.button_down.cross && ps3Translate[19].value[0]) {
-    Serial.println("Started pressing the cross button");
+    if (debugSerial) { Serial.println("Started pressing the cross button"); }
     cmdProcessor(ps3Translate[19].value, 3);
   }
   if (Ps3.event.button_up.cross && ps3Translate[20].value[0]) {
-    Serial.println("Released the cross button");
+    if (debugSerial) { Serial.println("Released the cross button"); }
     cmdProcessor(ps3Translate[20].value, 3);
   }
 
   if (abs(Ps3.event.analog_changed.button.square) && ps3Translate[21].value[0]) {
-    Serial.print("Pressing the square button: ");
-    Serial.println(Ps3.data.analog.button.square, DEC);
+    if (debugSerial) {
+      Serial.print("Pressing the square button: ");
+      Serial.println(Ps3.data.analog.button.square, DEC);
+    }
     sprintf(sendCommand, "%s%04d",
             ps3Translate[21].value,
             Ps3.data.analog.button.square);
     cmdProcessor(sendCommand, 3);
   }
   if (Ps3.event.button_down.square && ps3Translate[22].value[0]) {
-    Serial.println("Started pressing the square button");
+    if (debugSerial) { Serial.println("Started pressing the square button"); }
     cmdProcessor(ps3Translate[22].value, 3);
   }
   if (Ps3.event.button_up.square && ps3Translate[23].value[0]) {
-    Serial.println("Released the square button");
+    if (debugSerial) { Serial.println("Released the square button"); }
     cmdProcessor(ps3Translate[23].value, 3);
   }
 
   if (abs(Ps3.event.analog_changed.button.triangle) && ps3Translate[24].value[0]) {
-    Serial.print("Pressing the triangle button: ");
-    Serial.println(Ps3.data.analog.button.triangle, DEC);
+    if (debugSerial) {
+      Serial.print("Pressing the triangle button: ");
+      Serial.println(Ps3.data.analog.button.triangle, DEC);
+    }
     sprintf(sendCommand, "%s%04d",
             ps3Translate[24].value,
             Ps3.data.analog.button.triangle);
     cmdProcessor(sendCommand, 3);
   }
   if (Ps3.event.button_down.triangle && ps3Translate[25].value[0]) {
-    Serial.println("Started pressing the triangle button");
+    if (debugSerial) { Serial.println("Started pressing the triangle button"); }
     cmdProcessor(ps3Translate[25].value, 3);
   }
   if (Ps3.event.button_up.triangle && ps3Translate[26].value[0]) {
-    Serial.println("Released the triangle button");
+    if (debugSerial) { Serial.println("Released the triangle button"); }
     cmdProcessor(ps3Translate[26].value, 3);
   }
 
   if (abs(Ps3.event.analog_changed.button.circle && ps3Translate[27].value[0])) {
-    Serial.print("Pressing the circle button: ");
-    Serial.println(Ps3.data.analog.button.circle, DEC);
+    if (debugSerial) {
+      Serial.print("Pressing the circle button: ");
+      Serial.println(Ps3.data.analog.button.circle, DEC);
+    }
     sprintf(sendCommand, "%s%04d",
             ps3Translate[27].value,
             Ps3.data.analog.button.circle);
     cmdProcessor(sendCommand, 3);
   }
   if (Ps3.event.button_down.circle && ps3Translate[28].value[0]) {
-    Serial.println("Started pressing the circle button");
+    if (debugSerial) { Serial.println("Started pressing the circle button"); }
     cmdProcessor(ps3Translate[28].value, 3);
   }
   if (Ps3.event.button_up.circle && ps3Translate[29].value[0]) {
-    Serial.println("Released the circle button");
+    if (debugSerial) { Serial.println("Released the circle button"); }
     cmdProcessor(ps3Translate[29].value, 3);
   }
 
   //------------- Digital and Analog shoulder button events -------------
 
   if (abs(Ps3.event.analog_changed.button.l1) && ps3Translate[30].value[0]) {
-    Serial.print("Pressing the left shoulder button: ");
-    Serial.println(Ps3.data.analog.button.l1, DEC);
+    if (debugSerial) {
+      Serial.print("Pressing the left shoulder button: ");
+      Serial.println(Ps3.data.analog.button.l1, DEC);
+    }
     sprintf(sendCommand, "%s%04d",
             ps3Translate[30].value,
             Ps3.data.analog.button.l1);
     cmdProcessor(sendCommand, 3);
   }
   if (Ps3.event.button_down.l1 && ps3Translate[31].value[0]) {
-    Serial.println("Started pressing the left shoulder button");
+    if (debugSerial) { Serial.println("Started pressing the left shoulder button"); }
     cmdProcessor(ps3Translate[31].value, 3);
   }
   if (Ps3.event.button_up.l1 && ps3Translate[32].value[0]) {
-    Serial.println("Released the left shoulder button");
+    if (debugSerial) { Serial.println("Released the left shoulder button"); }
     cmdProcessor(ps3Translate[32].value, 3);
   }
 
   if (abs(Ps3.event.analog_changed.button.r1) && ps3Translate[33].value[0]) {
-    Serial.print("Pressing the right shoulder button: ");
-    Serial.println(Ps3.data.analog.button.r1, DEC);
+    if (debugSerial) {
+      Serial.print("Pressing the right shoulder button: ");
+      Serial.println(Ps3.data.analog.button.r1, DEC);
+    }
     sprintf(sendCommand, "%s%04d",
             ps3Translate[3].value,
             Ps3.data.analog.button.r1);
     cmdProcessor(sendCommand, 3);
   }
   if (Ps3.event.button_down.r1 && ps3Translate[34].value[0]) {
-    Serial.println("Started pressing the right shoulder button");
+    if (debugSerial) { Serial.println("Started pressing the right shoulder button"); }
     cmdProcessor(ps3Translate[34].value, 3);
   }
   if (Ps3.event.button_up.r1 && ps3Translate[35].value[0]) {
-    Serial.println("Released the right shoulder button");
+    if (debugSerial) { Serial.println("Released the right shoulder button"); }
     cmdProcessor(ps3Translate[35].value, 3);
   }
 
   //-------------- Digital and Analog trigger button events -------------
 
   if (abs(Ps3.event.analog_changed.button.l2) && ps3Translate[36].value[0]) {
-    Serial.print("Pressing the left trigger button: ");
-    Serial.println(Ps3.data.analog.button.l2, DEC);
+    if (debugSerial) {
+      Serial.print("Pressing the left trigger button: ");
+      Serial.println(Ps3.data.analog.button.l2, DEC);
+    }
     sprintf(sendCommand, "%s%04d",
             ps3Translate[36].value,
             Ps3.data.analog.button.l2);
     cmdProcessor(sendCommand, 3);
   }
   if (Ps3.event.button_down.l2 && ps3Translate[37].value[0]) {
-    Serial.println("Started pressing the left trigger button");
+    if (debugSerial) { Serial.println("Started pressing the left trigger button"); }
     cmdProcessor(ps3Translate[37].value, 3);
   }
   if (Ps3.event.button_up.l2 && ps3Translate[38].value[0]) {
-    Serial.println("Released the left trigger button");
+    if (debugSerial) { Serial.println("Released the left trigger button"); }
     cmdProcessor(ps3Translate[38].value, 3);
   }
 
   if (abs(Ps3.event.analog_changed.button.r2) && ps3Translate[39].value[0]) {
-    Serial.print("Pressing the right trigger button: ");
-    Serial.println(Ps3.data.analog.button.r2, DEC);
+    if (debugSerial) {
+      Serial.print("Pressing the right trigger button: ");
+      Serial.println(Ps3.data.analog.button.r2, DEC);
+    }
     sprintf(sendCommand, "%s%04d",
             ps3Translate[39].value,
             Ps3.data.analog.button.r2);
     cmdProcessor(sendCommand, 3);
   }
   if (Ps3.event.button_down.r2 && ps3Translate[40].value[0]) {
-    Serial.println("Started pressing the right trigger button");
+    if (debugSerial) { Serial.println("Started pressing the right trigger button"); }
     cmdProcessor(ps3Translate[40].value, 3);
   }
   if (Ps3.event.button_up.r2 && ps3Translate[41].value[0]) {
-    Serial.println("Released the right trigger button");
+    if (debugSerial) { Serial.println("Released the right trigger button"); }
     cmdProcessor(ps3Translate[41].value, 3);
   }
 
   //---------- Digital select/start/ps button events ---------
   if (Ps3.event.button_down.select && ps3Translate[42].value[0]) {
-    Serial.println("Started pressing the select button");
+    if (debugSerial) { Serial.println("Started pressing the select button"); }
     cmdProcessor(ps3Translate[42].value, 3);
   }
   if (Ps3.event.button_up.select && ps3Translate[43].value[0]) {
-    Serial.println("Released the select button");
+    if (debugSerial) { Serial.println("Released the select button"); }
     cmdProcessor(ps3Translate[43].value, 3);
   }
 
   if (Ps3.event.button_down.start && ps3Translate[44].value[0]) {
-    Serial.println("Started pressing the start button");
+    if (debugSerial) { Serial.println("Started pressing the start button"); }
     cmdProcessor(ps3Translate[44].value, 3);
   }
   if (Ps3.event.button_up.start && ps3Translate[45].value[0]) {
-    Serial.println("Released the start button");
+    if (debugSerial) { Serial.println("Released the start button"); }
     cmdProcessor(ps3Translate[45].value, 3);
   }
 
   if (Ps3.event.button_down.ps && ps3Translate[46].value[0]) {
-    Serial.println("Started pressing the Playstation button");
+    if (debugSerial) { Serial.println("Started pressing the Playstation button"); }
     cmdProcessor(ps3Translate[46].value, 3);
   }
   if (Ps3.event.button_up.ps && ps3Translate[47].value[0]) {
-    Serial.println("Released the Playstation button");
+    if (debugSerial) { Serial.println("Released the Playstation button"); }
     cmdProcessor(ps3Translate[47].value, 3);
   }
 
@@ -384,5 +412,5 @@ void notify() {
 }
 //PS3 connect routine
 void onConnect() {
-  Serial.println("PS3 Controller Connected.");
+  if (debugSerial) { Serial.println("PS3 Controller Connected."); }
 }

@@ -1,16 +1,30 @@
 // contains routines that perform robot and command processing functions
 //
 // process received data from web page, PS3, file or internal
-/*- if in BASICSTA mode, serial passthru on, no handshake, Wifi client, web page input, local drive commands processed to drive pins
+/*  In the BASIC modes, pins 12 and 13 are used to provide drive signals to transistors switching current to motors
+    The standard mode is to drive PNP transistors
+  - if in BASICSTA mode, serial passthru on, no handshake, Wifi client, web page input, local drive commands processed to drive pins
   - if in BASICAP mode, serial passthru on, no handshake, Wifi Access Point, web page input, local drive commands processed to drive pins
   - if in BASICPS3 mode, serial passthru on, no handshake, PS3 input, local drive commands processed to drive pins
+    The plus modes are to drive NPN transistors
+  - if in BASICSTA+ mode, serial passthru on, no handshake, Wifi client, web page input, local drive commands processed to drive pins as positive
+  - if in BASICAP+ mode, serial passthru on, no handshake, Wifi Access Point, web page input, local drive commands processed to drive pins as positive
+  - if in BASICPS3+ mode, serial passthru on, no handshake, PS3 input, local drive commands processed to drive pins as positive
+
+  - For SOKOBAN modes, drive pins are 3 and 12 (normally have reserved roles) and 13 is PWM output. This is a specialised robot role with minimal configuration
+  - if in SOKOBANSTA mode, serial passthru off, no handshake, Wifi client, web page input, alternative drive pins, L293D decode
+  - if in SOKOBANAP mode, serial passthru off, no handshake, Wifi Access Point, web page input, alternative drive pins, L293D decode
+  - if in SOKOBANPS3 mode, serial passthru off, no handshake, PS3 input, alternative drive pins, L293D decode
+
   - if in REMOTESTA mode, serial passthru on, handshake on, Wifi client, web page input
   - if in REMOTEAP mode, serial passthru on, handshake on, Wifi Access Point, web page input
   - if in REMOTEPS3 mode, serial passthru on, handshake on, PS3 controller input
-  - if in SERVOSTA mode, serial passthru on, no handshake, Wifi client, web page input, servo commands processed to 2 pins
-  - if in SERVOAP mode, serial passthru on, no handshake, Wifi Access Point, web page input, servo commands processed to 2 pins
-  - if in SERVOPS3 mode, serial passthru on, no handshake, PS3 controller input, servo commands processed to 2 pins
-*/
+  
+  - The SERVO modes make it easy to add a Pan and Tilt function to some of the other L0Cost robot builds
+  - if in SERVOSTA mode, serial passthru on, no handshake, Wifi client, web page input, servo commands processed to pins 12 and 13
+  - if in SERVOAP mode, serial passthru on, no handshake, Wifi Access Point, web page input, servo commands processed pins 12 and 13
+  - if in SERVOPS3 mode, serial passthru on, no handshake, PS3 controller input, servo commands processed pins 12 and 13
+  */
 //
 // *********************************************************************************************
 // Command processor routine - all commands routed via this code
@@ -50,28 +64,15 @@ int cmdProcessor(char variable[], int source) {
   // process command file by schedule opening
   else if (variable[0] == 'F') {
     int i, j;
-    // for (i = 1; i < strlen(variable); i++) {
-    //   sendChar[i - 1] = variable[i];
-    // }
-    // sendChar[i] = '\0';
-    //alternative method, overwrite 'F' with '/'
     variable[0] = '/';
     if (scriptStatus) {
       if (debugSerial) { Serial.printf("File not processed, currently processing %s", scriptFile); }
       retVal = 1;
     } else {
-      // j = strlen(variable);
-      // if (j >= 20) j = 19;
-      // for (i = 1; i < j; i++) {
-      //   sendChar[i] = variable[i];
-      // }
       sendChar[i] = '\0';
       strcpy(scriptFile, variable);
       scriptStatus = 1;  // begin script processing
     }
-    // Serial.println(sendChar);
-    // set file status to 1 , process file
-    // put filename in file open format
   }
   // process local comand directly ie reset
   else if (variable[0] == 'L') {
@@ -80,8 +81,6 @@ int cmdProcessor(char variable[], int source) {
       sendChar[i - 1] = variable[i];
     }
     sendChar[i] = '\0';
-    // Serial.println(sendChar);
-    //shiftLeft(variable,1);
     retVal = localProcessor(sendChar);
   } else {
     retVal = 90;
@@ -92,15 +91,34 @@ int cmdProcessor(char variable[], int source) {
   }
   return retVal;
 }
+
+// *********************************************************************************************
+// initialise pins for three pin operation, left and right drive with PWM on a single pin
+// *********************************************************************************************
+void initThreePin(void) {
+  // setup for three pin mode used for Sokoban robots
+  // change left motor pin
+  leftMotorPin = leftMatrixMotorPin;
+  // left and right pins are only logic 0 and 1
+  pinMode(rightMotorPin, OUTPUT);
+  pinMode(leftMotorPin, OUTPUT);
+  // enable pin is setup for PWM
+  ledcSetup(enableMotorPWMSpeedChannel, PWMFreq, PWMResolution);
+  pinMode(enableMotorPin, OUTPUT);
+  ledcAttachPin(enableMotorPin, enableMotorPWMSpeedChannel);
+  execPWM = 1;  // flag pwm attached
+}
+
 // *********************************************************************************************
 // initialise PWM for direct control from the controller
 // *********************************************************************************************
 void initPWM() {
-  //Set up PWM for motor speed control 
+  //Set up PWM for motor speed control
   ledcSetup(rightMotorPWMSpeedChannel, PWMFreq, PWMResolution);
   ledcSetup(leftMotorPWMSpeedChannel, PWMFreq, PWMResolution);
-  attachPWM();   // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Remove when line follower hardware fixed
+  attachPWM();  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Remove when line follower hardware fixed
 }
+
 // *********************************************************************************************
 // detach PWM for direct control from the board (typically line follower circuit)
 // *********************************************************************************************
@@ -108,7 +126,7 @@ void initPWM() {
 // *********************************************************************************************
 void detachPWM() {
   // change pin usage to input to allw local motor control
-  return;  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Remove when line follower hardware fixed
+  return;       // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Remove when line follower hardware fixed
   execPWM = 0;  // flag pwm detached
   //ledcWrite(rightMotorPWMSpeedChannel, 0);
   //ledcWrite(leftMotorPWMSpeedChannel, 0);
@@ -118,8 +136,9 @@ void detachPWM() {
   //GPIO.func_out_sel_cfg[leftMotorPin].inv_sel = 0;
   pinMode(rightMotorPin, INPUT);
   pinMode(leftMotorPin, INPUT);
-  if (debugSerial) { Serial.println("PWM Detached");}
+  if (debugSerial) { Serial.println("PWM Detached"); }
 }
+
 // *********************************************************************************************
 // initialise PWM for direct control from the controller
 // *********************************************************************************************
@@ -129,13 +148,19 @@ void attachPWM() {
   pinMode(leftMotorPin, OUTPUT);
   ledcAttachPin(rightMotorPin, rightMotorPWMSpeedChannel);
   ledcAttachPin(leftMotorPin, leftMotorPWMSpeedChannel);
-  GPIO.func_out_sel_cfg[rightMotorPin].inv_sel = 1;
-  GPIO.func_out_sel_cfg[leftMotorPin].inv_sel = 1;
-  execPWM = 1;  // flag pwm attached
+  // if negative polarity set then invert pin polarity
+  if (!execPolarity) {
+    GPIO.func_out_sel_cfg[rightMotorPin].inv_sel = 1;
+    GPIO.func_out_sel_cfg[leftMotorPin].inv_sel = 1;
+  }
+  execPWM = 1;                             // flag pwm attached
   directTimer = millis() + directTimeOut;  // reset direct timeout timer
-  if (debugSerial) { Serial.println("PWM Attached");}
+  if (debugSerial) { Serial.println("PWM Attached"); }
 }
 
+// *********************************************************************************************
+// The following routines are to implement hardware handshaking between this ESP32 and another
+// robot controller card, typically an Arduino or Pico
 // *********************************************************************************************
 int sendHandshake(char commsString[]) {
   // check if this routine is supposed to be used
@@ -162,8 +187,9 @@ int remoteProcessor(char commsString[]) {
   }
   return 1;
 }
+
 // *********************************************************************************************
-// process local command
+// process local command - if command prefixed by L, come here 
 // *********************************************************************************************
 int localProcessor(char localVariable[]) {
   int retVal = 0;
@@ -211,15 +237,15 @@ int localProcessor(char localVariable[]) {
   } else if (cmdCmp(localVariable, "MTRDETACH") == 0) {  // de-initialise motor processing
     // execute routine to turn off PWM to motor control pins and make them input
     detachPWM();
-  } else if (cmdCmp(localVariable, "MTRTIMEOUT") == 0) {     // motor processing timeout
-    // timing routine to automatically deinitialise the PWM pins after number of milliseconds
-      directTimeOut = getValue(localVariable, 10);
-      if (directTimeOut <0) {
-        directTimeOut = defaultTimeOut;
-      } else if (directTimeOut == 0) {
-        directTimeOut = 9999999;   // if set as zero the set to 999 seconds
-      }
-      if (debugSerial) { Serial.printf("Timeout set to - %d\n", directTimeOut); }
+  } else if (cmdCmp(localVariable, "MTRTIMEOUT") == 0) {  // motor processing timeout
+                                                          // timing routine to automatically deinitialise the PWM pins after number of milliseconds
+    directTimeOut = getValue(localVariable, 10);
+    if (directTimeOut < 0) {
+      directTimeOut = defaultTimeOut;
+    } else if (directTimeOut == 0) {
+      directTimeOut = 9999999;  // if set as zero the set to 999 seconds
+    }
+    if (debugSerial) { Serial.printf("Timeout set to - %d\n", directTimeOut); }
   } else if (motorControl(localVariable) && servoControl(localVariable)) {  // assume its a motor control command, and if not, unknown command
     Serial.print(localVariable);
     Serial.println(" - not known");
@@ -227,9 +253,12 @@ int localProcessor(char localVariable[]) {
   }
   return retVal;
 }
+
+// *********************************************************************************************
+// getValue - service routine to get numeric value from command
 // *********************************************************************************************
 int getValue(char fullCommand[], int offset) {
-  char temp[6] = { 0, 0, 0, 0, 0, 0  };
+  char temp[6] = { 0, 0, 0, 0, 0, 0 };
   char length = strlen(fullCommand);
   if ((length - offset >= 6) || (length - offset <= 0)) return 0;
   for (int i = offset; i < length; i++) {
@@ -237,6 +266,9 @@ int getValue(char fullCommand[], int offset) {
   }
   return atoi(temp);
 }
+
+// *********************************************************************************************
+// cmdCmp - service routine to specifically test for robot commands
 // *********************************************************************************************
 int cmdCmp(char fullCommand[], char testCommand[]) {
   int full = strlen(fullCommand);
@@ -247,6 +279,10 @@ int cmdCmp(char fullCommand[], char testCommand[]) {
   }
   return 0;
 }
+
+// *********************************************************************************************
+// process camera only commands - this is primarily to offload code complexity from the 
+// local command handler routine
 // *********************************************************************************************
 int cameraControl(char localVariable[]) {
   int retVal = 0;
@@ -352,6 +388,7 @@ int cameraControl(char localVariable[]) {
   }
   return 0;
 }
+
 // *********************************************************************************************
 // servo command processing
 // *********************************************************************************************
@@ -480,8 +517,9 @@ int servoControl(char localVariable[]) {
   }
   return 0;
 }
+
 // *********************************************************************************************
-// Interpret and execute motor control on pins 12 and 13
+// Interpret and execute motor control on pins 3, 12 and 13
 // *********************************************************************************************
 int motorControl(char localVariable[]) {
   // process motor control LMTR command pattern
@@ -490,16 +528,20 @@ int motorControl(char localVariable[]) {
   // the runtime is from 0-9999 and indcates the length of time in milliseconds the motor value is active for.
   // a runtime of 0 does not timeout
   // MTRxxxxyyyytttt
-  // or STOP command which zero's both channels
+  // or STOP command which zero's all channels
+  //
+  // three pin control converts any non-zero left/right value to a logic 1, and uses
+  // the highest of the left/right values as the PWM value for the enable pin
 
-  if (!execMotor) return 1;   // not processing motor commands
-  if (!execPWM)   {
+  if (!execMotor) return 1;  // not processing motor commands
+  if (!execPWM) {
     attachPWM();
   }
 
   int driveValueLY = 0;
   int driveValueRY = 0;
   int runTimeValue = 0;
+  int enableDrive = 0;
 
   char driveCharLY[5] = { 0, 0, 0, 0, 0 };
   char driveCharRY[5] = { 0, 0, 0, 0, 0 };
@@ -516,35 +558,62 @@ int motorControl(char localVariable[]) {
     driveValueLY = atoi(driveCharLY);
     driveValueRY = atoi(driveCharRY);
     runTimeValue = atoi(runTimeChar);
+    if (debugSerial) { Serial.printf("Motor left - %d Motor right - %d Timer - %d\n", driveValueLY, driveValueRY, runTimeValue); }
+    if (execMotor == 1) {
+      // two pin motor control only has drive forward controls with tank steer
+      // negative values are therefor zeroed
+      if (driveValueLY < 0) driveValueLY = 0;
+      if (driveValueRY < 0) driveValueRY = 0;
+      if (runTimeValue < 0) runTimeValue = 0;
+      ledcWrite(rightMotorPWMSpeedChannel, driveValueRY);
+      ledcWrite(leftMotorPWMSpeedChannel, driveValueLY);
 
-
-    // two pin motor control only has drive forward controls with tank steer
-    // negative values are therefor zeroed
-    if (driveValueLY < 0) driveValueLY = 0;
-    if (driveValueRY < 0) driveValueRY = 0;
-    if (runTimeValue < 0) runTimeValue = 0;
-    ledcWrite(rightMotorPWMSpeedChannel, driveValueRY);
-    ledcWrite(leftMotorPWMSpeedChannel, driveValueLY);
+    } else {
+      enableDrive = abs(driveValueLY);
+      if (driveValueLY <= 0) {
+        driveValueLY = 0;
+      } else {
+        driveValueLY = 1;
+      }
+      if (abs(driveValueRY) > enableDrive) {
+        enableDrive = abs(driveValueRY);
+      }
+      if (driveValueRY <= 0) {
+        driveValueRY = 0;
+      } else {
+        driveValueRY = 1;
+      }
+      ledcWrite(enableMotorPWMSpeedChannel, enableDrive);
+      digitalWrite(leftMotorPin, driveValueLY);
+      digitalWrite(rightMotorPin, driveValueRY);
+      if (debugSerial) { Serial.print("Write digital"); }
+    }
     if (runTimeValue == 0) {
-      motorTimer=millis() + 999999; // default timeout is 99 seconds
+      motorTimer = millis() + 999999;  // default timeout is 99 seconds
     } else motorTimer = millis() + runTimeValue;
     directTimer = millis() + directTimeOut;  // reset direct timeout timer
-    if (debugSerial) { Serial.printf("Motor left - %d Motor right - %d Timer - %d\n", driveValueLY,driveValueRY, runTimeValue); }
+    if (debugSerial) { Serial.printf("Motor left - %d Motor right - %d Timer - %d\n", driveValueLY, driveValueRY, runTimeValue); }
     if (scriptStatus) {
       scriptTimer = millis() + runTimeValue;
       if (debugSerial) { Serial.printf("Pausing for %d milliseconds \n", runTimeValue); }
       scriptProcess = 3;
     }
-
   } else if (strcmp(localVariable, "STOP") == 0) {
     // stop
     // if configured for local control mode
     // switch both motors off
-    ledcWrite(rightMotorPWMSpeedChannel, 0);
-    ledcWrite(leftMotorPWMSpeedChannel, 0);
+    if (execMotor == 1) {
+      ledcWrite(rightMotorPWMSpeedChannel, 0);
+      ledcWrite(leftMotorPWMSpeedChannel, 0);
+    } else if (execMotor == 2) {
+      ledcWrite(enableMotorPWMSpeedChannel, 0);
+    }
   } else return 1;
   return 0;
 }
+
+// *********************************************************************************************
+// file processor schedules coammands from script files 
 // *********************************************************************************************
 void fileProcessor(int type) {
   /* File command processor
@@ -656,6 +725,9 @@ if in pause, loop until pause ended.
       }
   }
 }
+
+// *********************************************************************************************
+// shiftLeft - service routine to shift command string left by requested number of steps
 // *********************************************************************************************
 int shiftLeft(char *variable[], int step) {
   int retVal = 0;
@@ -670,9 +742,12 @@ int shiftLeft(char *variable[], int step) {
   *variable[i] = '\0';
   return 0;
 }
+
+// *********************************************************************************************
+// initialise servo pins 12 and 13 usage on an esp32
 // *********************************************************************************************
 int initServos(void) {
-  // these dummies just provide a work around for the servo pins usage
+  // these dummies just provide a work around for the pwm pins usage
   dummy1.setPeriodHertz(50);
   dummy2.setPeriodHertz(50);
   dummy1.attach(1, 1000, 2000);

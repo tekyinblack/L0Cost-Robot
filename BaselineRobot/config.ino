@@ -118,7 +118,7 @@ int read_datafile(fs::FS &fs, const char *path, int fileType) {
     for (int i = 1; i <= 32; i++) {
       fileName[i] = path[i - 1];
     }
-  } else strcpy(fileName,path);
+  } else strcpy(fileName, path);
 
   if (debugSerial) { Serial.printf("Reading file: %s\n", fileName); }
 
@@ -194,15 +194,9 @@ int readHtml(fs::FS &fs, const char *htmlf) {
   File file = root.openNextFile();
   while (file) {
     if (!file.isDirectory()) {
-      // Serial.print("  FILE: ");
-      // Serial.print(file.name());
-      // Serial.print("  SIZE: ");
-      // Serial.println(file.size());
       if (debugSerial) { Serial.printf("  FILE:  %s   SIZE: %d  \n", file.name(), file.size()); }
       if (strcmp(htmlf, file.name()) == 0) {
         htmlSize = file.size();
-        // Serial.print("Match found:");
-        // Serial.println(htmlSize);
         if (debugSerial) { Serial.printf("Match found: %d\n", htmlSize); }
         break;
       }
@@ -229,7 +223,7 @@ int readHtml(fs::FS &fs, const char *htmlf) {
   return 0;
 }
 
-//
+// routine to align filename with / for use with SD card access
 void shiftFileName(char *fileName) {
   int nameLength = strlen(fileName);
   if (fileName[0] == '/') return;
@@ -243,15 +237,6 @@ void shiftFileName(char *fileName) {
 void read_SDcard(void) {
   if (debugSerial) { Serial.println("Read data file"); }
   read_datafile(SD_MMC, configConfig, CONFIG);
-  // check execution type and set flags
-  // flagSet(configType);  // set the config flags based on type field in config
-  // if (strcmp(configWiFiType, "NOWIFI") == 0) {
-  //   execWiFi = 0;
-  // } else if (strcmp(configWiFiType, "CLIENT") == 0) {
-  //   execWiFi = 1;
-  // } else if (strcmp(configWiFiType, "ACCESS") == 0) {
-  //   execWiFi = 2;
-  // }
 
   if (execWiFi) {
     if (read_datafile(SD_MMC, configWifi, WIFI)) {
@@ -272,7 +257,9 @@ void read_SDcard(void) {
   }
 }
 
-// routine to load html page into variable
+// routine to verify that filename exists on SD card
+// this is a copy of the htlml load code and has not yet been customised 
+// for the function
 int checkFile(fs::FS &fs, const char *chkFile) {
 
   int linecount = 0;
@@ -293,10 +280,6 @@ int checkFile(fs::FS &fs, const char *chkFile) {
   File file = root.openNextFile();
   while (file) {
     if (!file.isDirectory()) {
-      // Serial.print("  FILE: ");
-      // Serial.print(file.name());
-      // Serial.print("  SIZE: ");
-      // Serial.println(file.size());
       if (debugSerial) { Serial.printf("  FILE:  %s   SIZE: %d  \n", file.name(), file.size()); }
       if (strcmp(chkFile, file.name()) == 0) {
         retVal = 0;

@@ -2,15 +2,29 @@
 // An option to provide a configuration file will be provided at a later date
 // when this may be removed, the point being to make it simpler
 void flagSet(char execType[20]) {
-/*- if in BASICSTA mode, serial passthru on, no handshake, Wifi client, web page input, local drive commands processed to drive pins
+/*  In the BASIC modes, pins 12 and 13 are used to provide drive signals to transistors switching current to motors
+    The standard mode is to drive PNP transistors
+  - if in BASICSTA mode, serial passthru on, no handshake, Wifi client, web page input, local drive commands processed to drive pins
   - if in BASICAP mode, serial passthru on, no handshake, Wifi Access Point, web page input, local drive commands processed to drive pins
   - if in BASICPS3 mode, serial passthru on, no handshake, PS3 input, local drive commands processed to drive pins
+    The plus modes are to drive NPN transistors
+  - if in BASICSTA+ mode, serial passthru on, no handshake, Wifi client, web page input, local drive commands processed to drive pins as positive
+  - if in BASICAP+ mode, serial passthru on, no handshake, Wifi Access Point, web page input, local drive commands processed to drive pins as positive
+  - if in BASICPS3+ mode, serial passthru on, no handshake, PS3 input, local drive commands processed to drive pins as positive
+
+  - For SOKOBAN modes, drive pins are 3 and 12 (normally have reserved roles) and 13 is PWM output. This is a specialised robot role with minimal configuration
+  - if in SOKOBANSTA mode, serial passthru off, no handshake, Wifi client, web page input, alternative drive pins, L293D decode
+  - if in SOKOBANAP mode, serial passthru off, no handshake, Wifi Access Point, web page input, alternative drive pins, L293D decode
+  - if in SOKOBANPS3 mode, serial passthru off, no handshake, PS3 input, alternative drive pins, L293D decode
+
   - if in REMOTESTA mode, serial passthru on, handshake on, Wifi client, web page input
   - if in REMOTEAP mode, serial passthru on, handshake on, Wifi Access Point, web page input
   - if in REMOTEPS3 mode, serial passthru on, handshake on, PS3 controller input
-  - if in SERVOSTA mode, serial passthru on, no handshake, Wifi client, web page input, servo commands processed to 2 pins
-  - if in SERVOAP mode, serial passthru on, no handshake, Wifi Access Point, web page input, servo commands processed to 2 pins
-  - if in SERVOPS3 mode, serial passthru on, no handshake, PS3 controller input, servo commands processed to 2 pins
+  
+  - The SERVO modes make it easy to add a Pan and Tilt function to some of the other L0Cost robot builds
+  - if in SERVOSTA mode, serial passthru on, no handshake, Wifi client, web page input, servo commands processed to pins 12 and 13
+  - if in SERVOAP mode, serial passthru on, no handshake, Wifi Access Point, web page input, servo commands processed pins 12 and 13
+  - if in SERVOPS3 mode, serial passthru on, no handshake, PS3 controller input, servo commands processed pins 12 and 13
   */
   if (strcmp(execType, "BASICSTA") == 0) {
     ///set BASICSTA mode, serial passthru on, no handshake, Wifi client, web page input, local drive commands processed to drive pins
@@ -20,7 +34,8 @@ void flagSet(char execType[20]) {
     execSerial = 1;     // configure and pass output to serial port
     execMotor = 1;      // configure motor control output 
     execHandshake = 0;  // pins configured for remote controller serial handshake
-    execServo = 0;      // configure servo control output, 
+    execServo = 0;      // configure servo control output
+    execPolarity = 0;   // negative motor drive
   } else if (strcmp(execType, "BASICAP") == 0) {
     ///set BASICAP mode, serial passthru on, no handshake, Wifi Access Point, web page input, local drive commands processed to drive pins
     execWiFi = 2;       // wifi access point
@@ -30,6 +45,7 @@ void flagSet(char execType[20]) {
     execMotor = 1;      // configure motor control output 
     execHandshake = 0;  // pins configured for remote controller serial handshake
     execServo = 0;      // configure servo control output
+    execPolarity = 0;   // negative motor drive
   } else if (strcmp(execType, "BASICPS3") == 0) {
     ///set BASICPS3 mode, serial passthru on, no handshake, PS3 input, local drive commands processed to drive pins
     execWiFi = 0;       // wifi client
@@ -39,6 +55,67 @@ void flagSet(char execType[20]) {
     execMotor = 1;      // configure motor control output
     execHandshake = 0;  // pins configured for remote controller serial handshake
     execServo = 0;      // configure servo control output
+    execPolarity = 0;   // negative motor drive
+  } else    if (strcmp(execType, "BASICSTA+") == 0) {
+    ///set BASICSTA+ mode, serial passthru on, no handshake, Wifi client, web page input, local drive commands processed to drive pins as positive
+    execWiFi = 1;       // wifi client
+    execPS3 = 0;        // use PS3 input
+    execSensor = 0;     // use serial pins for local sensor input
+    execSerial = 1;     // configure and pass output to serial port
+    execMotor = 1;      // configure motor control output 
+    execHandshake = 0;  // pins configured for remote controller serial handshake
+    execServo = 0;      // configure servo control output
+    execPolarity = 1;   // positive motor drive
+  } else if (strcmp(execType, "BASICAP+") == 0) {
+    ///set BASICAP+ mode, serial passthru on, no handshake, Wifi Access Point, web page input, local drive commands processed to drive pins as positive
+    execWiFi = 2;       // wifi access point
+    execPS3 = 0;        // use PS3 input
+    execSensor = 0;     // use serial pins for local sensor input
+    execSerial = 1;     // configure and pass output to serial port
+    execMotor = 1;      // configure motor control output 
+    execHandshake = 0;  // pins configured for remote controller serial handshake
+    execServo = 0;      // configure servo control output
+    execPolarity = 1;   // positive motor drive
+  } else if (strcmp(execType, "BASICPS3+") == 0) {
+    ///set BASICPS3+ mode, serial passthru on, no handshake, PS3 input, local drive commands processed to drive pins as positive
+    execWiFi = 0;       // wifi client
+    execPS3 = 1;        // use PS3 input
+    execSensor = 0;     // use serial pins for local sensor input
+    execSerial = 1;     // configure and pass output to serial port
+    execMotor = 1;      // configure motor control output
+    execHandshake = 0;  // pins configured for remote controller serial handshake
+    execServo = 0;      // configure servo control output
+    execPolarity = 1;   // positive motor drive
+  } else    if (strcmp(execType, "SOKOBANSTA") == 0) {
+    ///set SOKOBANSTA mode, serial passthru off, no handshake, Wifi client, web page input, local drive commands processed to alternative drive pins
+    execWiFi = 1;       // wifi client
+    execPS3 = 0;        // use PS3 input
+    execSensor = 0;     // use serial pins for local sensor input
+    execSerial = 0;     // configure and pass output to serial port
+    execMotor = 2;      // configure motor control output 
+    execHandshake = 0;  // pins configured for remote controller serial handshake
+    execServo = 0;      // configure servo control output
+    execPolarity = 1;   // positive motor drive
+  } else if (strcmp(execType, "SOKOBANAP") == 0) {
+    ///set SOKOBANAP mode, serial passthru off no handshake, Wifi Access Point, web page input, local drive commands processed to alternative drive pins
+    execWiFi = 2;       // wifi access point
+    execPS3 = 0;        // use PS3 input
+    execSensor = 0;     // use serial pins for local sensor input
+    execSerial = 0;     // configure and pass output to serial port
+    execMotor = 2;      // configure motor control output 
+    execHandshake = 0;  // pins configured for remote controller serial handshake
+    execServo = 0;      // configure servo control output
+    execPolarity = 1;   // positive motor drive
+  } else if (strcmp(execType, "SOKOBANPS3") == 0) {
+    ///set SOKOBANPS3 mode, serial passthru off, no handshake, PS3 input, local drive commands processed to alternative drive pins
+    execWiFi = 0;       // wifi client
+    execPS3 = 1;        // use PS3 input
+    execSensor = 0;     // use serial pins for local sensor input
+    execSerial = 0;     // configure and pass output to serial port
+    execMotor = 2;      // configure motor control output
+    execHandshake = 0;  // pins configured for remote controller serial handshake
+    execServo = 0;      // configure servo control output
+    execPolarity = 1;   // positive motor drive
   } else if (strcmp(execType, "REMOTESTA") == 0) {
     ///set REMOTESTA mode, serial passthru on, handshake on, Wifi client, web page input
     execWiFi = 1;       // wifi access point

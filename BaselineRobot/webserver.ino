@@ -1,5 +1,6 @@
 // webserver processing
-// these routines provide teh webserver element, with video streaming
+// these routines provide the webserver element, with video streaming, and also the 
+// breakout of the 
 // webserver part boundary
 #define PART_BOUNDARY "123456789000000000000987654321"
 
@@ -10,13 +11,17 @@ static const char *_STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %
 httpd_handle_t camera_httpd = NULL;
 httpd_handle_t stream_httpd = NULL;
 
+// *********************************************************************************************
 // send index page on first contact and refresh
+// *********************************************************************************************
 static esp_err_t index_handler(httpd_req_t *req) {
   httpd_resp_set_type(req, "text/html");
   return httpd_resp_send(req, (const char *)htmlPage, strlen(htmlPage));
 }
 
+// *********************************************************************************************
 // send video stream data
+// *********************************************************************************************
 static esp_err_t stream_handler(httpd_req_t *req) {
   camera_fb_t *fb = NULL;
   esp_err_t res = ESP_OK;
@@ -35,19 +40,17 @@ static esp_err_t stream_handler(httpd_req_t *req) {
       if (debugSerial) { Serial.println("Camera capture failed"); }
       res = ESP_FAIL;
     } else {
-      if (fb->width > 400) {
-        if (fb->format != PIXFORMAT_JPEG) {
-          bool jpeg_converted = frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len);
-          esp_camera_fb_return(fb);
-          fb = NULL;
-          if (!jpeg_converted) {
-            if (debugSerial) { Serial.println("JPEG compression failed"); }
-            res = ESP_FAIL;
-          }
-        } else {
-          _jpg_buf_len = fb->len;
-          _jpg_buf = fb->buf;
+      if (fb->format != PIXFORMAT_JPEG) {
+        bool jpeg_converted = frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len);
+        esp_camera_fb_return(fb);
+        fb = NULL;
+        if (!jpeg_converted) {
+          if (debugSerial) { Serial.println("JPEG compression failed"); }
+          res = ESP_FAIL;
         }
+      } else {
+        _jpg_buf_len = fb->len;
+        _jpg_buf = fb->buf;
       }
     }
     if (res == ESP_OK) {
@@ -75,11 +78,9 @@ static esp_err_t stream_handler(httpd_req_t *req) {
   return res;
 }
 
-
-
-
-
+// *********************************************************************************************
 // process received GET request. This primarily gets the variable and passes it to the cmdprocessor
+// *********************************************************************************************
 static esp_err_t cmd_handler(httpd_req_t *req) {
   char *buf;
   size_t buf_len;
@@ -115,7 +116,7 @@ static esp_err_t cmd_handler(httpd_req_t *req) {
   //sensor_t *s = esp_camera_sensor_get();
 
 
-  if (cmdProcessor(variable,1)) {
+  if (cmdProcessor(variable, 1)) {
     return httpd_resp_send_500(req);
   }
 
@@ -123,7 +124,9 @@ static esp_err_t cmd_handler(httpd_req_t *req) {
   return httpd_resp_send(req, NULL, 0);
 }
 
+// *********************************************************************************************
 // start the video stream server
+// *********************************************************************************************
 void startCameraServer() {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.server_port = configWebPort;
