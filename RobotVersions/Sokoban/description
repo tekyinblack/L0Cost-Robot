@@ -1,0 +1,5 @@
+Sokoban Bot
+This small robot is intended to play a physical version of the compouter game, Sokoban,
+in which the player has to move crates around in an imaginary warehouse, the objective to sovle
+the problem of moving the crates to the required positions by only pushing them. This robot can also be 
+used for line and target following.
