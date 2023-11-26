@@ -1,0 +1,74 @@
+// Startup file for Sokoban control operation
+//
+//  MTR left values / right values / runtime
+// the left and right values are from 0-255
+// the runtime is from 0-9999 and indcates the length of time in milliseconds the motor value is active for.
+// a runtime of 0 does not timeout
+// MTRxxxxyyyytttt
+// or STOP command which zero's both channels
+//
+// set the command timeout to 40 seconds (PWM will automatically detach after timeout)
+// LMTRTIMEOUT05000
+//
+// All camera control settings are prefixed with LC, L for local, and C for camera
+// FRAMESIZE 
+// 10 UXGA(1600x1200)
+// 9  SXGA(1280x1024)
+// 8  XGA(1024x768)
+// 7  SVGA(800x600)
+// 6  VGA(640x480)
+// 5  CIF(400x296)
+// 4  QVGA(320x240)
+// 3  HQVGA(240x176)
+// 0  QQVGA(160x120)
+LCFRAMESIZE07
+// Quality range 10 - 63
+LCQUALITY12
+// Brightness -2 to 2
+//LCBRIGHT00
+// Contrast -2 to 2
+//LCCONTRAST00
+// Saturation -2 to 2
+//LCSAT0
+// Effect
+// 0 No Effect
+// 1 Negative
+// 2 Grayscale
+// 3 Red Tint
+// 4 Green Tint
+// 5 Blue Tint
+// 6 Sepia
+//LCEFFECT00
+// Active White Balance 0 or 1
+LCAWB1
+// Active White Balance Gain 0 or 1
+LCAWBGAIN0
+// White Balance Mode
+// 0 Auto
+// 1 Sunny
+// 2 Cloudy
+// 3 Office
+// 4 Home
+//LCWBMODE00
+// Automatic Exposure Correction Sensor 0 or 1
+//LCAEC1
+// Automatic Exposure Digital Signal Processing
+//LCAECDSP0
+// Automatic Exposure Level -2 to 2
+//LCAELEVEL0
+// Automatic Gain Control 0 or 1
+//LCAGC1
+// Automatic gain Control Ceiling 0 - 6
+LCAGCGAIN03
+// Black Pixel Correction 0 or 1
+//LCBPC0
+// White Pixel Correction 0 or 1
+//LCWPC1
+// Gamma Correction 0 or 1
+//LCRAWGMA0
+// Horizontal mirror 0 or 1
+//LCHMIRROR0
+// flip image vertically 0 or 1
+//LCVFLIP0
+// Scaling off or On 0 or 1
+//LCDCW1

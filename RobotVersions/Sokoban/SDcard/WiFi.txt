@@ -1,0 +1,5 @@
+SSID                  //<<<<<<<<<<<<<<<<Insert SSID of local WiFi here
+Woolbrook.79          //<<<<<<<<<<<<<<<<Insert password for local WiFi here
+Sokoban.html          //<<<<<<<<<<<<<<<<Web page to be used for steering robot
+80                    //<<<<<<<<<<<<<<<<Port number to be used for webpage
+81                    //<<<<<<<<<<<<<<<<Port number referenced on webpage for video streaming

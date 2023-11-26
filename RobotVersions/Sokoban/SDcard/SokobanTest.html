@@ -1,0 +1,154 @@
+<html>
+  <head>
+    <title>Sokoban Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      body { font-family: Arial; text-align: center; margin:0px auto; padding-top: 30px;}
+      table { margin-left: auto; margin-right: auto; }
+      td { padding: 8 px;  }
+      .button {
+        background-color: Tomato;
+        border: none;
+        border-radius: 10px;
+        color: white;
+        padding: 10px 20px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 18px;
+        margin: 6px 3px;
+        cursor: pointer;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: rgba(0,0,0,0);
+      }
+      img {  width: auto ;
+        max-width: 100% ;
+        height: auto ; 
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Sokoban Command Test Page</h1>
+    <img src="" id="photo" >
+    <br>
+     <table>
+		<! Line Follower Motor Commands >
+     <tr><td colspan="3" align="center">   
+     <input type="text" id="CommandF" value="LMTR025502550000"/>
+     <input type="button" id = "fButton" value="Forward" 
+     onmousedown = "forward()" 
+     onmouseup="sndCmd('LMTR000000000000');"/>
+     </td></tr>
+     
+     <tr><td align="center">
+     <input type="text" id="CommandL" value="LMTR000002550000"/>
+     <input type="button" id = "lButton" value="Left" 
+     onmousedown = "left()"  
+     onmouseup="sndCmd('LMTR000000000000');"/>  
+     <input type="text" id="CommandS" value="LMTR000000000000"/>
+     <input type="button" id = "sButton" value="Stop" 
+     onmousedown = "stop()"  
+     onmouseup="sndCmd('LMTR000000000000');"/> 
+     <input type="text" id="CommandR" value="LMTR025500000000"/>
+     <input type="button" id = "rButton" value="Right" 
+     onmousedown = "right()" 
+     onmouseup="sndCmd('LMTR000000000000');"/>	   
+     </td></tr>  
+                     
+     <tr><td colspan="3" align="center">
+     <input type="text" id="CommandB" value="LMTR-255-2550000"/>
+     <input type="button" id = "bButton" value="Reverse" 
+     onmousedown = "reverse()"   
+     onmouseup="sndCmd('LMTR000000000000');"
+     </td></tr>  
+    </table>
+
+           <! FLASH LED commands >
+    <table>
+      <tr><td align="center"><button class="button" 
+      onmousedown="sndCmd('LFLASHON');" 
+      ontouchstart="sndCmd('LFLASHON');"
+      >Light On</button></td>
+       <td align="center"><button class="button" 
+      onmousedown="sndCmd('LTOGGLEFLASH');" 
+      ontouchstart="sndCmd('LTOGGLEFLASH');">Toggle Light</button></td>
+      <td align="center"><button class="button" 
+      onmousedown="sndCmd('LFLASHOFF');" 
+      ontouchstart="sndCmd('LFLASHOFF');"
+      >Light Off</button></td></tr> 
+      <tr><td colspan="3"  align="center"><button class="button" 
+      onmousedown="sndCmd('LFLASHON');" 
+      ontouchstart="sndCmd('LFLASHON');"
+      onmouseup="sndCmd('LFLASHOFF');"
+      ontouchend="sndCmd('LFLASHOFF');">Flash Light</button></td></tr>               
+    </table>
+   <script>
+   //setInterval(getData,100);
+   function sndCmd(x) {
+     var xhr = new XMLHttpRequest();
+     xhr.open("GET", "/action?go=" + x, true);
+     xhr.send();
+   }
+   function enterCommand() {
+     var txtName = document.getElementById("Command").value;
+     var xhr = new XMLHttpRequest();
+     xhr.open("GET", "/action?go=" + txtName, true);
+     xhr.send();
+   }
+      function forward() {
+     var txtName = document.getElementById("CommandF").value;
+     var xhr = new XMLHttpRequest();
+     xhr.open("GET", "/action?go=" + txtName, true);
+     xhr.send();
+   }
+      function left() {
+     var txtName = document.getElementById("CommandL").value;
+     var xhr = new XMLHttpRequest();
+     xhr.open("GET", "/action?go=" + txtName, true);
+     xhr.send();
+   }
+      function stop() {
+     var txtName = document.getElementById("CommandS").value;
+     var xhr = new XMLHttpRequest();
+     xhr.open("GET", "/action?go=" + txtName, true);
+     xhr.send();
+   }
+      function right() {
+     var txtName = document.getElementById("CommandR").value;
+     var xhr = new XMLHttpRequest();
+     xhr.open("GET", "/action?go=" + txtName, true);
+     xhr.send();
+   }
+      function reverse() {
+     var txtName = document.getElementById("CommandB").value;
+     var xhr = new XMLHttpRequest();
+     xhr.open("GET", "/action?go=" + txtName, true);
+     xhr.send();
+   }
+   function getData() {
+	// var robotData = fetch(window.location.protocol + "//" + window.location.hostname + "/data");
+
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+	document.getElementById("demo2").innerHTML = this.responseText;
+      var dataObj = JSON.parse(this.responseText);
+      if (dataObj.type == "user") {
+
+		  document.getElementById("demo").innerHTML = dataObj.text;
+      }
+     }
+  };
+  xhttp.open("GET", "/data", true);
+  xhttp.send();
+}
+     
+   window.onload = document.getElementById("photo").src = window.location.protocol + "//" + window.location.hostname + ":81/stream";
+  </script>
+  </body>
+</html>
