@@ -1,0 +1,2 @@
+There are two versions of the local controller designed, one using the Arduino Nano format and the other the Raspberry Pi Pico format.
+Designs and code for each are held separately in their respective folders
