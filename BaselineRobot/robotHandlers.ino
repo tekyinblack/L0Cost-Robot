@@ -25,21 +25,30 @@
   - if in SERVOAP mode, serial passthru on, no handshake, Wifi Access Point, web page input, servo commands processed pins 12 and 13
   - if in SERVOPS3 mode, serial passthru on, no handshake, PS3 controller input, servo commands processed pins 12 and 13
   */
-//
-// *********************************************************************************************
-// Command processor routine - all commands routed via this code
-// *********************************************************************************************
-// the source field indicates where the command came from
-// 0 = internal   internal commands are executed irrespective of status
-// 1 = web page   if a web page command fails, 500 message returned, the web page may resubmit
-// 2 = file       if a file command fails, it waits and resubmits
-// 3 = PS3        if a PS3 command fails, it is ignored
-//
-// return
-// 0 command processed ok
-// 91 file processing in progress
-// 92 couldn't get lock
-//
+/*
+*********************************************************************************************
+Command processor routine - all commands routed via this code
+*********************************************************************************************
+the source field indicates where the command came from
+0 = internal   internal commands are executed irrespective of status
+1 = web page   if a web page command fails, 500 message returned, the web page may resubmit
+2 = file       if a file command fails, it waits and resubmits
+3 = PS3        if a PS3 command fails, it is ignored
+4 = serial     if a serial port command fails, NOEXEC message returned
+
+Command prefixes are 
+L - local command for execution by this controller
+LC - local command specifically for a camera if fitted
+X - remote command, routed to the serial port
+F - file command, executes the script in the named file 
+H - where appropriate, send the command to the webpage as an unbound JSON string
+P - command for PS3 controller 
+
+return
+0 command processed ok
+91 file processing in progress
+92 couldn't get lock
+*/
 int cmdProcessor(char variable[], int source) {
   int retVal = 0;
   if (debugSerial) { Serial.printf("Command =  %s  %d \n", variable, source); }
@@ -81,7 +90,25 @@ int cmdProcessor(char variable[], int source) {
       sendChar[i - 1] = variable[i];
     }
     sendChar[i] = '\0';
-    retVal = localProcessor(sendChar);
+    retVal = localProcessor(sendChar, source);
+  }
+  // process local comand directly ie reset
+  else if (variable[0] == 'H') {
+    int i;
+    for (i = 1; i < strlen(variable); i++) {
+      sendChar[i - 1] = variable[i];
+    }
+    sendChar[i] = '\0';
+    retVal = htmlProcessor(sendChar, source);
+  }
+  // process local comand directly ie reset
+  else if (variable[0] == 'P') {
+    int i;
+    for (i = 1; i < strlen(variable); i++) {
+      sendChar[i - 1] = variable[i];
+    }
+    sendChar[i] = '\0';
+    retVal = ps3Processor(sendChar, source);
   } else {
     retVal = 90;
   }
@@ -91,6 +118,8 @@ int cmdProcessor(char variable[], int source) {
   }
   return retVal;
 }
+
+
 
 // *********************************************************************************************
 // initialise pins for three pin operation, left and right drive with PWM on a single pin
@@ -125,7 +154,7 @@ void initPWM() {
 //  NOT CURRENTLY REQUIRED UNTIL HARDWARE FIX FOR LINE FOLLOWER RESOLVED
 // *********************************************************************************************
 void detachPWM() {
-  // change pin usage to input to allw local motor control
+  // change pin usage to input to allow local motor control
   return;       // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Remove when line follower hardware fixed
   execPWM = 0;  // flag pwm detached
   //ledcWrite(rightMotorPWMSpeedChannel, 0);
@@ -189,14 +218,17 @@ int remoteProcessor(char commsString[]) {
 }
 
 // *********************************************************************************************
-// process local command - if command prefixed by L, come here 
+// process local command - if command prefixed by L, come here
 // *********************************************************************************************
-int localProcessor(char localVariable[]) {
+int localProcessor(char localVariable[], int source) {
   int retVal = 0;
   int pauseValue = 0;
   // test if it starts with C and is thus a camera command
   if (localVariable[0] == 'C') {
     cameraControl(localVariable);
+  } else if (localVariable[0] == 'G') {
+    // test if it starts with G and is thus a guidance command
+    guideControl(localVariable);
   } else if (strcmp(localVariable, "FLASHPEEK") == 0) {
     // switch local flash LED on for limited time of 5 seconds, prevents it being left on
     flashState = 1;
@@ -221,7 +253,16 @@ int localProcessor(char localVariable[]) {
       flashTimer = FLASH_ON_TIME;
       digitalWrite(FLASH_PIN, HIGH);
     }
-  } else if (strcmp(localVariable, "RESET") == 0) {   // reboot local processor
+  } else if (strcmp(localVariable, "DEBUGOFF") == 0) {
+    // switch debug off
+    debugSerial = 0;
+  } else if (strcmp(localVariable, "DEBUGON") == 0) {
+    // switch debug on
+    debugSerial = 1;
+  } else if (strcmp(localVariable, "RESET") == 0) {  // reboot local processor
+    ESP.restart();
+      } else if (strcmp(localVariable, "PICO") == 0) {  // turn on PiWars Pico mode
+    execPico = 1;
   } else if (cmdCmp(localVariable, "REPEAT") == 0) {  // if script processing in operation, close and reopen script file
     // this is used to run a script continuously
     scriptProcess = 5;
@@ -246,7 +287,7 @@ int localProcessor(char localVariable[]) {
       directTimeOut = 9999999;  // if set as zero the set to 999 seconds
     }
     if (debugSerial) { Serial.printf("Timeout set to - %d\n", directTimeOut); }
-  } else if (motorControl(localVariable) && servoControl(localVariable)) {  // assume its a motor control command, and if not, unknown command
+  } else if (motorControl(localVariable, source) && servoControl(localVariable)) {  // assume its a motor control command, and if not, unknown command
     Serial.print(localVariable);
     Serial.println(" - not known");
     if (debugSerial) { Serial.printf(" %s - not known\n", localVariable); }
@@ -281,13 +322,13 @@ int cmdCmp(char fullCommand[], char testCommand[]) {
 }
 
 // *********************************************************************************************
-// process camera only commands - this is primarily to offload code complexity from the 
+// process camera only commands - this is primarily to offload code complexity from the
 // local command handler routine
 // *********************************************************************************************
 int cameraControl(char localVariable[]) {
   int retVal = 0;
   char cameraCommand[21];
-  sensor_t *s = esp_camera_sensor_get();
+
   // left shift command
   int i = 0;
   while (localVariable[i] != 0) {
@@ -295,100 +336,225 @@ int cameraControl(char localVariable[]) {
     i++;
     if (i > 20) break;
   }
-  if (cmdCmp(cameraCommand, "HMIRROR") == 0) {
-    // swap horizontal video stream 0,1
-    retVal = s->set_hmirror(s, getValue(cameraCommand, 7));
-
-  } else if (cmdCmp(cameraCommand, "VFLIP") == 0) {
-    // swap vertical video stream 0,1
-    retVal = s->set_vflip(s, getValue(cameraCommand, 5));
-
-  } else if (cmdCmp(cameraCommand, "FRAMESIZE") == 0) {
-    // change stream size
-    // 10 UXGA(1600x1200)
-    // 9  SXGA(1280x1024)
-    // 8  XGA(1024x768)
-    // 7  SVGA(800x600)
-    // 6  VGA(640x480)
-    // 5  CIF(400x296)
-    // 4  QVGA(320x240)
-    // 3  HQVGA(240x176)
-    // 0  QQVGA(160x120)
-    if (s->pixformat == PIXFORMAT_JPEG) {
-      // res = s->set_framesize(s, (framesize_t)val);
-      retVal = s->set_framesize(s, (framesize_t)getValue(cameraCommand, 9));
-    }
-  } else if (cmdCmp(cameraCommand, "QUALITY") == 0) {
-    // change jpeg quality 4-64
-    retVal = s->set_quality(s, getValue(cameraCommand, 7));
-
-  } else if (cmdCmp(cameraCommand, "BRIGHT") == 0) {
-    // adjust brightness -2,-1,0,1,2
-    retVal = s->set_brightness(s, getValue(cameraCommand, 6));
-
-  } else if (cmdCmp(cameraCommand, "CONTRAST") == 0) {
-    // adjust contrast -2,-1,0,1,2
-    retVal = s->set_contrast(s, getValue(cameraCommand, 8));
-
-  } else if (cmdCmp(cameraCommand, "SAT") == 0) {
-    // adjust saturation -2,-1,0,1,2
-    retVal = s->set_saturation(s, getValue(cameraCommand, 3));
-
-  } else if (cmdCmp(cameraCommand, "EFFECT") == 0) {
-    // apply effect 0,1,2,3,4,5,6
-    retVal = s->set_special_effect(s, getValue(cameraCommand, 6));
-
-  } else if (cmdCmp(cameraCommand, "AWB") == 0) {
-    // activate automatic white balance 0,1
-    retVal = s->set_whitebal(s, getValue(cameraCommand, 3));
-
-  } else if (cmdCmp(cameraCommand, "AWBGAIN") == 0) {
-    // automatic white balance gain 1 or 0
-    retVal = s->set_awb_gain(s, getValue(cameraCommand, 7));
-
-  } else if (cmdCmp(cameraCommand, "WBMODE") == 0) {
-    // automatic white balance mode 0 to 4
-    retVal = s->set_wb_mode(s, getValue(cameraCommand, 6));
-
-  } else if (cmdCmp(cameraCommand, "AEC") == 0) {
-    // activate automatic exposure control 0,1
-    retVal = s->set_exposure_ctrl(s, getValue(cameraCommand, 3));
-
-  } else if (cmdCmp(cameraCommand, "AECDSP") == 0) {
-    // activate automatic exposure control digital processing 0,1
-    retVal = s->set_aec2(s, getValue(cameraCommand, 6));
-
-  } else if (cmdCmp(cameraCommand, "AELEVEL") == 0) {
-    // adjust automatic exposure level -2, -1, 0,1,2
-    retVal = s->set_ae_level(s, getValue(cameraCommand, 7));
-
-  } else if (cmdCmp(cameraCommand, "AGC") == 0) {
-    // activate automatic gain control 0,1
-    retVal = s->set_gain_ctrl(s, getValue(cameraCommand, 3));
-
-  } else if (cmdCmp(cameraCommand, "AGCGAIN") == 0) {
-    // adjust automatic gain control level 0,1,2,3,4,5,6
-    retVal = s->set_agc_gain(s, getValue(cameraCommand, 7));
-
-  } else if (cmdCmp(cameraCommand, "BPC") == 0) {
-    // activate black pixel correction 0,1
-    retVal = s->set_bpc(s, getValue(cameraCommand, 3));
-
-  } else if (cmdCmp(cameraCommand, "WPC") == 0) {
-    // activate white pixel correction 0,1
-    retVal = s->set_wpc(s, getValue(cameraCommand, 3));
-
-  } else if (cmdCmp(cameraCommand, "RAWGMA") == 0) {
-    // activate gamma correction 0,1
-    retVal = s->set_raw_gma(s, getValue(cameraCommand, 6));
-
-  } else if (cmdCmp(cameraCommand, "DCW") == 0) {
-    // activate direct conversion 0,1
-    retVal = s->set_dcw(s, getValue(cameraCommand, 3));
+  if (cmdCmp(cameraCommand, "VIDEO") == 0) {
+    // activate video streamimg mode
+    retVal = setVideoMode();
+  } else if (cmdCmp(cameraCommand, "GUIDE") == 0) {
+    // activate video guidance mode
+    retVal = setGuideMode();
   }
+  if (execVideo || execGuide) {
+    sensor_t *s = esp_camera_sensor_get();
+
+    if (cmdCmp(cameraCommand, "HMIRROR") == 0) {
+      // swap horizontal video stream 0,1
+      retVal = s->set_hmirror(s, getValue(cameraCommand, 7));
+
+    } else if (cmdCmp(cameraCommand, "VFLIP") == 0) {
+      // swap vertical video stream 0,1
+      retVal = s->set_vflip(s, getValue(cameraCommand, 5));
+
+    } else if (cmdCmp(cameraCommand, "FRAMESIZE") == 0) {
+      // change stream size
+      // 10 UXGA(1600x1200)
+      // 9  SXGA(1280x1024)
+      // 8  XGA(1024x768)
+      // 7  SVGA(800x600)
+      // 6  VGA(640x480)
+      // 5  CIF(400x296)
+      // 4  QVGA(320x240)
+      // 3  HQVGA(240x176)
+      // 0  QQVGA(160x120)
+      if (s->pixformat == PIXFORMAT_JPEG && execGuide == 0) {  // if video guidance in operation don't allow changes to frame size
+        // res = s->set_framesize(s, (framesize_t)val);
+        retVal = s->set_framesize(s, (framesize_t)getValue(cameraCommand, 9));
+      }
+    } else if (cmdCmp(cameraCommand, "QUALITY") == 0) {
+      // change jpeg quality 4-64
+      retVal = s->set_quality(s, getValue(cameraCommand, 7));
+
+    } else if (cmdCmp(cameraCommand, "BRIGHT") == 0) {
+      // adjust brightness -2,-1,0,1,2
+      retVal = s->set_brightness(s, getValue(cameraCommand, 6));
+
+    } else if (cmdCmp(cameraCommand, "CONTRAST") == 0) {
+      // adjust contrast -2,-1,0,1,2
+      retVal = s->set_contrast(s, getValue(cameraCommand, 8));
+
+    } else if (cmdCmp(cameraCommand, "SAT") == 0) {
+      // adjust saturation -2,-1,0,1,2
+      retVal = s->set_saturation(s, getValue(cameraCommand, 3));
+
+    } else if (cmdCmp(cameraCommand, "EFFECT") == 0) {
+      // apply effect 0,1,2,3,4,5,6
+      retVal = s->set_special_effect(s, getValue(cameraCommand, 6));
+
+    } else if (cmdCmp(cameraCommand, "AWB") == 0) {
+      // activate automatic white balance 0,1
+      retVal = s->set_whitebal(s, getValue(cameraCommand, 3));
+
+    } else if (cmdCmp(cameraCommand, "AWBGAIN") == 0) {
+      // automatic white balance gain 1 or 0
+      retVal = s->set_awb_gain(s, getValue(cameraCommand, 7));
+
+    } else if (cmdCmp(cameraCommand, "WBMODE") == 0) {
+      // automatic white balance mode 0 to 4
+      retVal = s->set_wb_mode(s, getValue(cameraCommand, 6));
+
+    } else if (cmdCmp(cameraCommand, "AEC") == 0) {
+      // activate automatic exposure control 0,1
+      retVal = s->set_exposure_ctrl(s, getValue(cameraCommand, 3));
+
+    } else if (cmdCmp(cameraCommand, "AECDSP") == 0) {
+      // activate automatic exposure control digital processing 0,1
+      retVal = s->set_aec2(s, getValue(cameraCommand, 6));
+
+    } else if (cmdCmp(cameraCommand, "AELEVEL") == 0) {
+      // adjust automatic exposure level -2, -1, 0,1,2
+      retVal = s->set_ae_level(s, getValue(cameraCommand, 7));
+
+    } else if (cmdCmp(cameraCommand, "AGC") == 0) {
+      // activate automatic gain control 0,1
+      retVal = s->set_gain_ctrl(s, getValue(cameraCommand, 3));
+
+    } else if (cmdCmp(cameraCommand, "AGCGAINMAX") == 0) {
+      // adjust automatic gain control ceiling 0,1,2,3,4,5,6
+      retVal = s->set_gainceiling(s, (gainceiling_t)getValue(cameraCommand, 10));
+      //res = s->set_gainceiling(s, (gainceiling_t)val);
+
+
+    } else if (cmdCmp(cameraCommand, "AGCGAIN") == 0) {
+      // adjust automatic gain control level 0,1,2,3,4,5,6
+      retVal = s->set_agc_gain(s, getValue(cameraCommand, 7));
+
+    } else if (cmdCmp(cameraCommand, "BPC") == 0) {
+      // activate black pixel correction 0,1
+      retVal = s->set_bpc(s, getValue(cameraCommand, 3));
+
+    } else if (cmdCmp(cameraCommand, "WPC") == 0) {
+      // activate white pixel correction 0,1
+      retVal = s->set_wpc(s, getValue(cameraCommand, 3));
+
+    } else if (cmdCmp(cameraCommand, "RAWGMA") == 0) {
+      // activate gamma correction 0,1
+      retVal = s->set_raw_gma(s, getValue(cameraCommand, 6));
+
+    } else if (cmdCmp(cameraCommand, "DCW") == 0) {
+      // activate direct conversion 0,1
+      retVal = s->set_dcw(s, getValue(cameraCommand, 3));
+    } else if (debugSerial) {
+      Serial.printf(" %s - not known\n", cameraCommand);
+    }
+  } else if (debugSerial) {
+    Serial.printf(" %s - not available - video not active\n", cameraCommand);
+  }
+
   return 0;
 }
 
+// *********************************************************************************************
+// process guidance only commands - this is primarily to offload code complexity from the
+// local command handler routine
+// *********************************************************************************************
+int guideControl(char localVariable[]) {
+  int retVal = 0;
+  char guideCommand[21];
+
+  // left shift command
+  int i = 0;
+  while (localVariable[i] != 0) {
+    guideCommand[i] = localVariable[i + 1];
+    i++;
+    if (i > 20) break;
+  }
+  if (cmdCmp(guideCommand, "VIDEO") == 0) {
+    // activate video streamimg mode
+    retVal = setVideoMode();
+  } else if (cmdCmp(guideCommand, "GUIDE") == 0) {
+    // activate video guidance mode
+    retVal = setGuideMode();
+  }
+  if (execVideo || execGuide) {
+    sensor_t *s = esp_camera_sensor_get();
+
+    if (cmdCmp(guideCommand, "GREEN") == 0) {
+      // set green threshold, positve indicates must be greater, negative indicates must be less
+      greenThreshold = getValue(guideCommand, 6);
+    } else if (cmdCmp(guideCommand, "RED") == 0) {
+      // set red threshold, positve indicates must be greater, negative indicates must be less
+      redThreshold = getValue(guideCommand, 4);
+    } else if (cmdCmp(guideCommand, "BLUE") == 0) {
+      // set blue threshold, positve indicates must be greater, negative indicates must be less
+      blueThreshold = getValue(guideCommand, 5);
+    } else if (cmdCmp(guideCommand, "BRIGHT") == 0) {
+      // set value for brightness adjustment
+      brightnessAdjust = getValue(guideCommand, 6);
+    } else if (cmdCmp(guideCommand, "COLOUR") == 0) {
+      // set value for colour detection
+      colourDetect = getValue(guideCommand, 6);
+      if (colourDetect < 0 || colourDetect > 10) {
+        colourDetect = 10;
+      }
+      blueThreshold = colourTranslate[0][colourDetect];
+      greenThreshold = colourTranslate[1][colourDetect];
+      redThreshold = colourTranslate[2][colourDetect];
+
+    } else if (cmdCmp(guideCommand, "UPDATE") == 0) {
+      // set update colour
+      // find coloured line
+      // #define BLACK 0
+      // #define RED 1
+      // #define ORANGE 2
+      // #define YELLOW 3
+      // #define GREEN 4
+      // #define BLUE 5
+      // #define VIOLET 7
+      // #define WHITE 10
+      updateColour = getValue(guideCommand, 6);
+    } else if (cmdCmp(guideCommand, "THRESHOLDT") == 0) {
+      lineThresholdT = getValue(guideCommand, 10);
+    } else if (cmdCmp(guideCommand, "THRESHOLDC") == 0) {
+      lineThresholdC = getValue(guideCommand, 10);
+    } else if (cmdCmp(guideCommand, "THRESHOLDB") == 0) {
+      lineThresholdB = getValue(guideCommand, 10);
+    } else if (cmdCmp(guideCommand, "THRESHOLD") == 0) {
+      lineThresholdT = getValue(guideCommand, 9);
+      lineThresholdC = lineThresholdT;
+      lineThresholdB = lineThresholdT;
+    } else if (cmdCmp(guideCommand, "LINE") == 0) {
+      // set line following in script
+      execLine = getValue(guideCommand, 4);
+      if (execLine) execBlob = 0;
+    } else if (cmdCmp(guideCommand, "BLOB") == 0) {
+      // set blob location in script
+      execBlob = getValue(guideCommand, 6);
+      if (execBlob) execLine = 0;
+    } else if (debugSerial) {
+      Serial.printf(" %s - not known\n", guideCommand);
+    }
+  } else if (debugSerial) {
+    Serial.printf(" %s - not available - video not active\n", guideCommand);
+  }
+
+  return 0;
+}
+
+// *********************************************************************************************
+// activate video streamimg mode
+// *********************************************************************************************
+int setVideoMode() {
+  execVideo = 1;
+  execGuide = 0;
+  return 0;
+}
+// *********************************************************************************************
+// activate video guidance mode
+// *********************************************************************************************
+int setGuideMode() {
+  execVideo = 0;
+  execGuide = 1;
+  return 0;
+}
 // *********************************************************************************************
 // servo command processing
 // *********************************************************************************************
@@ -521,17 +687,45 @@ int servoControl(char localVariable[]) {
 // *********************************************************************************************
 // Interpret and execute motor control on pins 3, 12 and 13
 // *********************************************************************************************
-int motorControl(char localVariable[]) {
-  // process motor control LMTR command pattern
-  //  MTR left values / right values / runtime
-  // the left and right values are from 0-255
-  // the runtime is from 0-9999 and indcates the length of time in milliseconds the motor value is active for.
-  // a runtime of 0 does not timeout
-  // MTRxxxxyyyytttt
-  // or STOP command which zero's all channels
-  //
-  // three pin control converts any non-zero left/right value to a logic 1, and uses
-  // the highest of the left/right values as the PWM value for the enable pin
+int motorControl(char localVariable[], int source) {
+  /*
+  process motor control LMTR command pattern
+  this can take two forms, one is general, and one specifically from a PS3 controller
+  From a general source
+
+   MTR left values / right values / runtime
+  the left and right values are from 0-255
+  the runtime is from 0-9999 and indcates the length of time in milliseconds the motor value is active for.
+  a runtime of 0 does not timeout
+  MTRxxxxyyyytttt
+  or STOP command which zero's all channels
+
+  From a PS3
+  MTR leftx/lefty/rightx/righty
+
+  in standard steering
+  leftx is ignored
+  left y is taken as power
+  rightx is taken as direction
+  righty is ignored
+
+  in tank steering
+  leftx is ignored
+  lefty is left motor
+  rightx is ignored
+  righty is right motor
+
+  three pin control converts any non-zero left/right value to a logic 1, and uses
+  the highest of the left/right values as the PWM value for the enable pin
+
+  The STOP command is also processed here as is the MTRD, set motor default command
+
+  STOP sets all PWM output immediately to zero, this is more of an emergency stop rather than a controlled slow down
+
+  MTRDxxxxyyyy sets up scaling factors for left and right motor output. The default for these is 255 and the resultant
+  motor power output is command input * scaling factor/255. This allows the motrs to be balanced where one might be 
+  slightly more powerful than the other leading to an imbalance in movement
+  */
 
   if (!execMotor) return 1;  // not processing motor commands
   if (!execPWM) {
@@ -548,17 +742,35 @@ int motorControl(char localVariable[]) {
   char runTimeChar[5] = { 0, 0, 0, 0, 0 };
 
 
-  if (localVariable[0] == 'M') {
-    int i;
-    for (i = 0; i < 4; i++) {
-      driveCharLY[i] = localVariable[i + 3];
-      driveCharRY[i] = localVariable[i + 7];
-      runTimeChar[i] = localVariable[i + 11];
+
+  if (cmdCmp(localVariable, "MTRD") == 0) {
+    for (int i = 0; i < 4; i++) {
+      driveCharLY[i] = localVariable[i + 4];
+      driveCharRY[i] = localVariable[i + 8];
     }
     driveValueLY = atoi(driveCharLY);
     driveValueRY = atoi(driveCharRY);
-    runTimeValue = atoi(runTimeChar);
-    if (debugSerial) { Serial.printf("Motor left - %d Motor right - %d Timer - %d\n", driveValueLY, driveValueRY, runTimeValue); }
+  } else if (cmdCmp(localVariable, "MTR") == 0) {
+    if (source == 3) {  // command is from PS3 so requires different processing for local control
+      for (int i = 0; i < 4; i++) {
+        driveCharLY[i] = localVariable[i + 7];
+        driveCharRY[i] = localVariable[i + 15];
+      }
+      driveValueLY = -atoi(driveCharLY);
+      driveValueRY = -atoi(driveCharRY);
+      runTimeValue = 0;
+    } else {
+      for (int i = 0; i < 4; i++) {
+        driveCharLY[i] = localVariable[i + 3];
+        driveCharRY[i] = localVariable[i + 7];
+        runTimeChar[i] = localVariable[i + 11];
+      }
+      driveValueLY = atoi(driveCharLY);
+      driveValueRY = atoi(driveCharRY);
+      runTimeValue = atoi(runTimeChar);
+    }
+
+
     if (execMotor == 1) {
       // two pin motor control only has drive forward controls with tank steer
       // negative values are therefor zeroed
@@ -589,7 +801,7 @@ int motorControl(char localVariable[]) {
       if (debugSerial) { Serial.print("Write digital"); }
     }
     if (runTimeValue == 0) {
-      motorTimer = millis() + 999999;  // default timeout is 99 seconds
+      motorTimer = millis() + 10000;  // default timeout is 10 seconds
     } else motorTimer = millis() + runTimeValue;
     directTimer = millis() + directTimeOut;  // reset direct timeout timer
     if (debugSerial) { Serial.printf("Motor left - %d Motor right - %d Timer - %d\n", driveValueLY, driveValueRY, runTimeValue); }
@@ -602,6 +814,8 @@ int motorControl(char localVariable[]) {
     // stop
     // if configured for local control mode
     // switch both motors off
+    motorTimer = 0;
+    if (debugSerial) { Serial.println("Motors stopping"); }
     if (execMotor == 1) {
       ledcWrite(rightMotorPWMSpeedChannel, 0);
       ledcWrite(leftMotorPWMSpeedChannel, 0);
@@ -612,8 +826,57 @@ int motorControl(char localVariable[]) {
   return 0;
 }
 
+int serialProcessor(int type) {
+  /*
+  Reads data from the serial connection as commands
+  Commands cannot be greater than 33 characters long in this definition and must
+  be terminated with a \n character
+  return codes
+  1 = serial not active
+  2 = serial data not available
+  3 = serial data too long (rest of input not ignored but processing continued)
+  4 = consecutive command limit exceeded (limits number of serial commands accepted before other processing)
+  */
+
+  if (!execSerial) return 1;
+
+  // read serial input until end of
+  if (Serial.available()) {
+    char nextChar = Serial.read();
+    if (nextChar == '\n') {
+      commandCount++;
+      if (execPico) {   // if comms with PiWars Pico processor being done, call to picoProcessor made to handle commands
+        picoProcessor(serialCommand, 4);
+      } else {
+        cmdProcessor(serialCommand, 4);
+      }
+      serialPointer = 0;  // reset serial command pointer
+    } else {
+      serialCommand[serialPointer] = nextChar;
+      serialCommand[serialPointer + 1] = '\0';
+      serialPointer++;
+      if (serialPointer >= serialLimit) {
+        // input exceeds command limit, input disgarded
+        serialPointer = 0;
+        serialCommand[0] = '\0';
+        commandCount = 0;  // reset command count
+        return 3;
+      }
+    }
+  } else {
+    commandCount = 0;  // reset command count
+    return 2;          // serial data not available
+  }
+  // check that consecutive command count not exceeded
+  if (commandCount >= commandLimit) {
+    commandCount = 0;  // reset command count
+    return 4;
+  }
+  return 0;
+}
+
 // *********************************************************************************************
-// file processor schedules coammands from script files 
+// file processor schedules commands from script files
 // *********************************************************************************************
 void fileProcessor(int type) {
   /* File command processor
@@ -671,7 +934,9 @@ if in pause, loop until pause ended.
           // if end of file, close file, update status to 0 and break
           // update file process to 1
           if (script.available()) {
+            // read file line until linefeed found or buffer is full
             int l = script.readBytesUntil('\n', scriptBuf, sizeof(scriptBuf));
+            // if carriage return included, reduce command length by 1
             if (l > 0 && scriptBuf[l - 1] == '\r') {
               l--;
             }
@@ -689,7 +954,7 @@ if in pause, loop until pause ended.
           break;
         case 1:
           result = cmdProcessor(scriptBuf, 2);
-          // if the script process stte has been changed then command executed ok
+          // if the script process state has been changed then command executed ok
           if (scriptProcess != 1) {
             break;
           } else if (result <= 91) {

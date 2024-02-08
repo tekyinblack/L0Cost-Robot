@@ -414,3 +414,15 @@ void notify() {
 void onConnect() {
   if (debugSerial) { Serial.println("PS3 Controller Connected."); }
 }
+
+// *********************************************************************************************
+// Process PS3 command
+// *********************************************************************************************
+int ps3Processor(char ps3Command[], int source) {
+  if (debugSerial) { Serial.printf("PS3 command ignored  %s  %d \n", ps3Command, source); }
+  return 0;
+}
+
+
+
+
