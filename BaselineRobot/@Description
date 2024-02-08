@@ -1,3 +1,5 @@
-This folder contains the second iteration after migrating from, the collaborative warehouse project.
-Most functions are complete and tested.
-Work has now started on the Pico sub processor which handles most of the direct motor and sensor workload
+This folder contains the fifth iteration after migrating from the collaborative warehouse project.
+This version contains communication to the local sub processor as well as the initial 
+video processing for line and blob detection.
+It also contains processing for use in PiWars 2024 as a subprocessor. This is in a separate Pico.ino file 
+which can be omitted.
