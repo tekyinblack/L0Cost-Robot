@@ -553,25 +553,34 @@ void loop() {
   }
 
   // Video processing routines
+  // any incuded print statements are for development testing and will be removed in a later version
   if (execGuide) {
     // only execute this section if video guidance in use
     if (!frameAvailable) {
       //     Serial.printf("Start conv: %d \n", millis());
+      // get frame into working frame buffer
       videoProcessing();
       //    Serial.printf("End conv: %d \n", millis());
     }
+
+    // if frame available, process selected detection routines
     if (frameAvailable == 1) {
+      // call line detection processing. This is currently only setup for white line on black background
+      // three frame positions are provided here, top, centre and bottom, and three 'lines' can detected and reported on in each
       if (execLine) {
         genCount++;
-        Serial.printf("%d %d ", millis(), genCount);
-        Serial.print("//");
+      //  Serial.printf("%d %d ", millis(), genCount);
+      //  Serial.print("//");
         findLineTop(WHITE);
-        Serial.print(",");
+      //  Serial.print(",");
         findLineCentre(WHITE);
-        Serial.print(",");
+     //   Serial.print(",");
         findLineBottom(WHITE);
-        Serial.print("\n");
+     //   Serial.print("\n");
         //    Serial.printf("End: %d \n", millis());
+
+     // call blob detection processing
+     // the initial reporting is targeted on the centre of the largest blob detected 
       } else if (execBlob) {
         //  genCount++;
         //   Serial.printf("%d %d \n", millis(), genCount);
@@ -582,6 +591,7 @@ void loop() {
 
 
       // end of successful processing, set frame available for processing elsewhere
+      // or flag frame processing complete and free frame buffer
 
       if (execVideo) {
 
