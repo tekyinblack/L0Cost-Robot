@@ -1,4 +1,8 @@
 // lock routines to ensure that script processing runs in harmony with input commands from PS3 or Webpages
+// this will be recoded as a class in the future
+// *********************************************************************************************
+// lockset sets a lock
+// *********************************************************************************************
 int lockSet(int &lock, int value) {
   int retVal = 0;
   if (!value) return retVal;
@@ -13,6 +17,9 @@ int lockSet(int &lock, int value) {
   return retVal;
 }
 
+// *********************************************************************************************
+// lockunset unsets a lock
+// *********************************************************************************************
 int lockUnSet(int &lock, int value) {
   int retVal = 0;
   if (!value) return retVal;
@@ -28,7 +35,9 @@ int lockUnSet(int &lock, int value) {
   interrupts();
   return retVal;
 }
-
+// *********************************************************************************************
+// locktest tets a lock
+// *********************************************************************************************
 int lockTest(int &lock, int value) {
   int retVal = 0;
   if (!value) return retVal;

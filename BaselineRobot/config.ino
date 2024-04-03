@@ -1,7 +1,8 @@
 // configuration processing
 // these routines read the SD card files to setup the operation of the card
-
+// *********************************************************************************************
 // file parse routine to obtain data from SD card files
+// *********************************************************************************************
 void fileParse(char *line, int fileType, int lineNo) {
   String workingString;
   switch (fileType) {
@@ -109,7 +110,9 @@ void fileParse(char *line, int fileType, int lineNo) {
   }
 }
 
+// *********************************************************************************************
 // routine to read a data file and parse according to the type ----------------------------------
+// *********************************************************************************************
 int read_datafile(fs::FS &fs, const char *path, int fileType) {
   char buf[200];
   int linecount = 0;
@@ -147,7 +150,9 @@ int read_datafile(fs::FS &fs, const char *path, int fileType) {
   return 0;
 }
 
+// *********************************************************************************************
 // routine to setup SD card for file attachments ----------------------------------
+// *********************************************************************************************
 int setup_sdcard() {
   if (debugSerial) { Serial.println("Mount SD card"); }
   //******1-bit mode
@@ -165,7 +170,9 @@ int setup_sdcard() {
   return 0;
 }
 
+// *********************************************************************************************
 // routine to load html page into variable
+// *********************************************************************************************
 int readHtml(fs::FS &fs, const char *htmlf) {
 
   // get the file name
@@ -223,7 +230,9 @@ int readHtml(fs::FS &fs, const char *htmlf) {
   return 0;
 }
 
+// *********************************************************************************************
 // routine to align filename with / for use with SD card access
+// *********************************************************************************************
 void shiftFileName(char *fileName) {
   int nameLength = strlen(fileName);
   if (fileName[0] == '/') return;
@@ -233,7 +242,9 @@ void shiftFileName(char *fileName) {
   fileName[0] = '/';
 }
 
+// *********************************************************************************************
 // startup routine to get config details and then wifi and email details ----------------------------------
+// *********************************************************************************************
 void read_SDcard(void) {
   if (debugSerial) { Serial.println("Read data file"); }
   read_datafile(SD_MMC, configConfig, CONFIG);
@@ -257,7 +268,9 @@ void read_SDcard(void) {
   }
 }
 
+// *********************************************************************************************
 // routine to verify that filename exists on SD card
+// *********************************************************************************************
 // this is a copy of the htlml load code and has not yet been customised 
 // for the function
 int checkFile(fs::FS &fs, const char *chkFile) {

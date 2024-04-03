@@ -20,57 +20,7 @@ static esp_err_t index_handler(httpd_req_t *req) {
   return httpd_resp_send(req, (const char *)htmlPage, strlen(htmlPage));
 }
 
-// *********************************************************************************************
-// get frame buffer new
-// *********************************************************************************************
-int videoProcessing(void) {
-  camera_fb_t *webBuffer = NULL;
-  frameAvailable = 2;  // signal frame processing in progress
-  webBuffer = esp_camera_fb_get();
-  out_width = webBuffer->width;
-  out_height = webBuffer->height;
-  out_len = webBuffer->width * webBuffer->height * 3;
-  if (out_len >= 100000) {
-    if (debugSerial) { Serial.printf("Frame too big to copy for processing %d \n", out_len); }
-    frameAvailable = 3;  // signal frame processing in error
-  } else {
-    out_buf = (uint8_t *)malloc(out_len);
-    if (!out_buf) {
-      if (debugSerial) { Serial.println("Conversion buffer allocation for processing failed"); }
-      frameAvailable = 3;  // signal frame processing in error
-    } else {
-      bool rgb888_convert = fmt2rgb888(webBuffer->buf, webBuffer->len, webBuffer->format, out_buf);
-      guideFrame.data = out_buf;
-      guideFrame.width = webBuffer->width;
-      guideFrame.height = webBuffer->height;
-      guideFrame.format = FB_BGR888;
-      guideFrame.bytes_per_pixel = 3;
 
-      esp_camera_fb_return(webBuffer);
-      webBuffer = NULL;
-
-      if (!rgb888_convert) {
-        free(out_buf);
-        if (debugSerial) { Serial.println("Conversion to rgb888 for processing failed"); }
-        frameAvailable = 3;  // signal frame processing in error
-        return 1;
-      } else frameAvailable = 1;  // signal frame processing successful
-    }
-  }
-
-  // camera_fb_t guideFrame;
-  // int framAvailable = 0;
-
-  // typedef struct {
-  //     uint8_t * buf;              /*!< Pointer to the pixel data */
-  //     size_t len;                 /*!< Length of the buffer in bytes */
-  //     size_t width;               /*!< Width of the buffer in pixels */
-  //     size_t height;              /*!< Height of the buffer in pixels */
-  //     pixformat_t format;         /*!< Format of the pixel data */
-  //     struct timeval timestamp;   /*!< Timestamp since boot of the first DMA buffer of the frame */
-  // } camera_fb_t;
-  return 0;
-}
 
 // *********************************************************************************************
 // send video stream data
@@ -89,17 +39,18 @@ static esp_err_t stream_handler(httpd_req_t *req) {
 
   if (webSwitch) {
     webSwitch = 0;
-    Serial.println("webSwitch reset");
+    if (debugSerial) {Serial.println("webSwitch reset");}
   }
 
   while (execGuide || execVideo) {
-    delay(10);  // prevent runaway
+    //if (debugSerial) {
+      delay(10);  // delay to slow/stop race contitions in testing
+    //}
 
     // standard video processing
     if (!execGuide && execVideo) {
       // get frame buffer
       fb = esp_camera_fb_get();
-      // fb = videoProcessing();
 
       // if the frame buffer is empty, log error and report failure
       if (!fb) {

@@ -1,6 +1,7 @@
 // This routine is included to provide a fixed set of configurations
 // An option to provide a configuration file will be provided at a later date
 // when this may be removed, the point being to make it simpler
+// this may be recoded as a class in the future to contain teh xec flags and also allow configurations to be loaded dynamically
 void flagSet(char execType[20]) {
   /*  In the BASIC modes, pins 12 and 13 are used to provide drive signals to transistors switching current to motors
     The standard mode is to drive PNP transistors

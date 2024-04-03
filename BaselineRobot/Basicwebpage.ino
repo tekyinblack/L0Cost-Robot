@@ -1,4 +1,4 @@
-// following is a default webpage if html file load from SD card fails. 
+// The following is a default webpage to be used if the html file load from SD card fails. 
 // It's intended to show a video stream on port 81
 static const char PROGMEM BASIC[] = R"rawliteral(
 <html>
