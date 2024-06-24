@@ -1,5 +1,7 @@
-This folder contains the fifth iteration after migrating from the collaborative warehouse project.
-This version contains communication to the local sub processor as well as the initial 
-video processing for line and blob detection.
-It also contains processing for use in PiWars 2024 as a subprocessor. This is in a separate Pico.ino file 
-which can be omitted.
+This folder contains two folders, v2 and v3 which contain core controller code
+The v2 folder is now an archive as the last version compatible with the old v2 ESP32 sdk
+The v3 folder will contain code compatible with the v3 ESP32 SDK until a newer version exists
+
+Development of the core controller is now running down with an empahsis on the dedicated controller
+boards based on Arduino, Raspberry Pi and Pico which use the core controller board for control input, 
+web serving and basic image processing
