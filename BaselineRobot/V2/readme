@@ -1,0 +1,2 @@
+This repository is the end of the code using the version 2 of the ESP32 sdk
+Future versions use version 3 which includes changes to the PWM routines
