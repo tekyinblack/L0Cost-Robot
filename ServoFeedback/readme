@@ -1,0 +1,6 @@
+These are the test and demonstration programs for SG90 or MG90 servos modified to use the feedback signal from the servo
+They are:
+1. Test the servo panning from 0-180-0 degrees and reading the feedback output. The output is formatted for input to the Arduino serial plotting screen. This also verifies that the servo is working after the modification.
+2. Initialise the servo to its current position on start up. Switch off, move the servo arm and switch on so that the operation can be confirmed. Compare this to the way the servo behaves on start up with program 1.
+3. Stop the servo being overloaded. With this program running and the servo arm fitted hold the servo arm tight when it tries to turn, the servo should initially attempt to turn but then stop with an error message on the serial console
+4. Report the current servo position. The servo will move and a report will be sent to to the serial console where the arm is and when it reaches its destination.
