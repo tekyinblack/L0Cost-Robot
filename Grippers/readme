@@ -1,0 +1,4 @@
+These are demonstration programs for grippers using SG90 or MG90 servos
+They are to setup the servo to 90 degrees to aid assembly, move the servo between 70 and 120
+degrees to test operation, and a program to grip objects, either with feedback from the servo
+or from metal contacts in the arms detecting the conductivity of the object being gripped.
